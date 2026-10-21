@@ -1,0 +1,1008 @@
+{
+  "checked_on": "2026-10-21",
+  "scope": "Public source inventory; pinned files where retrieved. No execution or dependency adoption.",
+  "repositories": [
+    {
+      "repository": "unxed/oddyness",
+      "url": "https://github.com/unxed/oddyness",
+      "role": "target",
+      "checked_on": "2026-10-21",
+      "branch": "main",
+      "commit": "ca4c8257748b160d61eb87296104c069ad9d6400",
+      "commit_date": "2026-10-21T20:23:08Z",
+      "archived": false,
+      "github_license_detection": "BSD-3-Clause",
+      "observed_top_level_license": "BSD-3-Clause",
+      "inspection": "metadata-only",
+      "reviewed_files": [],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "unxed/goWidgets",
+      "url": "https://github.com/unxed/goWidgets",
+      "role": "gui",
+      "checked_on": "2026-10-21",
+      "branch": "main",
+      "commit": "3811fbbeee997d3f57c1fc5157a85be7ff5aa0f1",
+      "commit_date": "2026-10-21T18:41:38+02:00",
+      "archived": false,
+      "github_license_detection": "BSD-3-Clause",
+      "observed_top_level_license": "BSD-3-Clause",
+      "inspection": "selected-code",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "c3ffd5c5866030f0a70ad3ed5398ad937e2a0300a1bafa21b727df71e28b20e6",
+          "url": "https://github.com/unxed/goWidgets/blob/3811fbbeee997d3f57c1fc5157a85be7ff5aa0f1/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "979fd5dae809c05ba4e625f005ac0de850ece6742db698fb5b97172ef2e75d18",
+          "url": "https://github.com/unxed/goWidgets/blob/3811fbbeee997d3f57c1fc5157a85be7ff5aa0f1/LICENSE"
+        },
+        {
+          "path": "api.go",
+          "sha256": "7cd5292f3b4ace346d8a7384704fb3ed94f45fd60c3f127abc3b9450f770b669",
+          "url": "https://github.com/unxed/goWidgets/blob/3811fbbeee997d3f57c1fc5157a85be7ff5aa0f1/api.go"
+        },
+        {
+          "path": "core/driver.go",
+          "sha256": "1649db08fe8d14d06f2731d831d80a8099c8e3ade0bc9767ba5e039204d12f52",
+          "url": "https://github.com/unxed/goWidgets/blob/3811fbbeee997d3f57c1fc5157a85be7ff5aa0f1/core/driver.go"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "DmitrL-dev/1cai-public",
+      "url": "https://github.com/DmitrL-dev/1cai-public",
+      "role": "source-tools",
+      "checked_on": "2026-10-21",
+      "branch": "main",
+      "commit": "5b7c1dce7b595625145a77bf2e20ef948a4a8517",
+      "commit_date": "2026-10-18T01:20:04-07:00",
+      "archived": false,
+      "github_license_detection": "MIT",
+      "observed_top_level_license": "MIT",
+      "inspection": "selected-code",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "9cec98c3ae64a67cd45b0b676dc060c4c8b950dfd95b090b218f6aa4ba7732ee",
+          "url": "https://github.com/DmitrL-dev/1cai-public/blob/5b7c1dce7b595625145a77bf2e20ef948a4a8517/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "17ea2aa99a9f65047131e6a4b8981bc9f186e9b564568350ac49678675bab5d0",
+          "url": "https://github.com/DmitrL-dev/1cai-public/blob/5b7c1dce7b595625145a77bf2e20ef948a4a8517/LICENSE"
+        },
+        {
+          "path": "go/go.mod",
+          "sha256": "1950701898484161f66ac49727ad64085a85d02968f675ba994324a92ba248f8",
+          "url": "https://github.com/DmitrL-dev/1cai-public/blob/5b7c1dce7b595625145a77bf2e20ef948a4a8517/go/go.mod"
+        },
+        {
+          "path": "go/internal/scanner/scanner.go",
+          "sha256": "44bb50328efb5f5ec65ded37b673d0703956127488464aec4747bc8f9c72cf63",
+          "url": "https://github.com/DmitrL-dev/1cai-public/blob/5b7c1dce7b595625145a77bf2e20ef948a4a8517/go/internal/scanner/scanner.go"
+        },
+        {
+          "path": "go/internal/scanner/strict.go",
+          "sha256": "246670df11e0c5cbfbbeff4630b70ad36c30d87f6fb53b20df81261bac731e30",
+          "url": "https://github.com/DmitrL-dev/1cai-public/blob/5b7c1dce7b595625145a77bf2e20ef948a4a8517/go/internal/scanner/strict.go"
+        },
+        {
+          "path": "go/internal/extractor/extractor.go",
+          "sha256": "4d7e474686ac2d9ba94bc4c6524e06eacd146530277398a16d067f1ebdba5bab",
+          "url": "https://github.com/DmitrL-dev/1cai-public/blob/5b7c1dce7b595625145a77bf2e20ef948a4a8517/go/internal/extractor/extractor.go"
+        },
+        {
+          "path": "go/internal/extractor/callgraph.go",
+          "sha256": "56def474192337336ee192d88ab6e88cf0006e43877b797e913308b962b8a5cc",
+          "url": "https://github.com/DmitrL-dev/1cai-public/blob/5b7c1dce7b595625145a77bf2e20ef948a4a8517/go/internal/extractor/callgraph.go"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "Oxotka/StackTechnologies1C",
+      "url": "https://github.com/Oxotka/StackTechnologies1C",
+      "role": "discovery",
+      "checked_on": "2026-10-21",
+      "branch": "main",
+      "commit": "0ec0470217912de636f10f8cff19fc060da1d24e",
+      "commit_date": "2026-10-19T10:45:16Z",
+      "archived": false,
+      "github_license_detection": "MIT",
+      "observed_top_level_license": "MIT",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "408cd5c1d9aed41f61622d9456fba34cb5a776f352c07afde201cac6c6005d7d",
+          "url": "https://github.com/Oxotka/StackTechnologies1C/blob/0ec0470217912de636f10f8cff19fc060da1d24e/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "c70f5b2eddf63296ba60b9d7ad71518c642486f35584ab6a49ce0083a78abf11",
+          "url": "https://github.com/Oxotka/StackTechnologies1C/blob/0ec0470217912de636f10f8cff19fc060da1d24e/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "LazarenkoA/1c-language-parser",
+      "url": "https://github.com/LazarenkoA/1c-language-parser",
+      "role": "bsl-frontend",
+      "checked_on": "2026-10-21",
+      "branch": "master",
+      "commit": "461cd761a494deb1e6d7b311214c6ef5b9c735b2",
+      "commit_date": "2025-10-13T14:01:29+03:00",
+      "archived": false,
+      "github_license_detection": "MIT",
+      "observed_top_level_license": "MIT",
+      "inspection": "selected-code",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "384674c15b57a028fa0e1b9ab56f5453aec0b6d3b26d561ad59d07ceae0def7a",
+          "url": "https://github.com/LazarenkoA/1c-language-parser/blob/461cd761a494deb1e6d7b311214c6ef5b9c735b2/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "117d339ed11c5627d44a7e21c730136e624bfe88d7c13da60a037e60015066b3",
+          "url": "https://github.com/LazarenkoA/1c-language-parser/blob/461cd761a494deb1e6d7b311214c6ef5b9c735b2/LICENSE"
+        },
+        {
+          "path": "go.mod",
+          "sha256": "65180ffeb599c08b0cf1383fa17f12db28a800dd8ecf50a3c492d1b4345a510b",
+          "url": "https://github.com/LazarenkoA/1c-language-parser/blob/461cd761a494deb1e6d7b311214c6ef5b9c735b2/go.mod"
+        },
+        {
+          "path": "ast/tokens.go",
+          "sha256": "b36307a21df79a0438531cfcbb138bcfd47324c4189e83883afd89313d649764",
+          "url": "https://github.com/LazarenkoA/1c-language-parser/blob/461cd761a494deb1e6d7b311214c6ef5b9c735b2/ast/tokens.go"
+        },
+        {
+          "path": "ast/grammar.y",
+          "sha256": "cb97b640a77b1ae9242ac93626b88462f8312659cb4ddd3c52a07f66eaba58a7",
+          "url": "https://github.com/LazarenkoA/1c-language-parser/blob/461cd761a494deb1e6d7b311214c6ef5b9c735b2/ast/grammar.y"
+        },
+        {
+          "path": "ast/ast.go",
+          "sha256": "d6532dde864a9601daf217b3dfb387b4c559b61395f5bd198342d6ac06e4be19",
+          "url": "https://github.com/LazarenkoA/1c-language-parser/blob/461cd761a494deb1e6d7b311214c6ef5b9c735b2/ast/ast.go"
+        },
+        {
+          "path": "ast/ast_test.go",
+          "sha256": "f8b7b1b773a18617a9fa10fe88f6e58e836dd1fe984285f703db9c431bf08bb1",
+          "url": "https://github.com/LazarenkoA/1c-language-parser/blob/461cd761a494deb1e6d7b311214c6ef5b9c735b2/ast/ast_test.go"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "EvilBeaver/OneScript",
+      "url": "https://github.com/EvilBeaver/OneScript",
+      "role": "independent-language-runtime",
+      "checked_on": "2026-10-21",
+      "branch": "develop",
+      "commit": "6f12dbdd557a768c24608927b72f3b6e63288d70",
+      "commit_date": "2026-10-16T06:59:02Z",
+      "archived": false,
+      "github_license_detection": "MPL-2.0",
+      "observed_top_level_license": "MPL-2.0",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "3d4a346eba2d8f52e488cfe9ba86c0f5484122a4cd0c8b52a1812e8bf54d1988",
+          "url": "https://github.com/EvilBeaver/OneScript/blob/6f12dbdd557a768c24608927b72f3b6e63288d70/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "9a381e233fb3606c9ba7ca3645778adcb000dc00bb884b3f9af2f00bb129924d",
+          "url": "https://github.com/EvilBeaver/OneScript/blob/6f12dbdd557a768c24608927b72f3b6e63288d70/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "1c-syntax/bsl-parser",
+      "url": "https://github.com/1c-syntax/bsl-parser",
+      "role": "bsl-sdbl-grammar",
+      "checked_on": "2026-10-21",
+      "branch": "develop",
+      "commit": "3901c3364b80350bb86ff631e6741ce12d683ce7",
+      "commit_date": "2026-10-14T19:57:25+02:00",
+      "archived": false,
+      "github_license_detection": "GPL-3.0",
+      "observed_top_level_license": "GPL-3.0",
+      "inspection": "selected-code",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "2d20c4d7be3134a9085f9c9ec4cbeb88c172f12ac37e6568094918d9ce6f2765",
+          "url": "https://github.com/1c-syntax/bsl-parser/blob/3901c3364b80350bb86ff631e6741ce12d683ce7/README.md"
+        },
+        {
+          "path": "COPYING.md",
+          "sha256": "d3eb96b748c5fcf4c841aaa42735859b7b1ae268ec3d94b455111a2d37bc5cbf",
+          "url": "https://github.com/1c-syntax/bsl-parser/blob/3901c3364b80350bb86ff631e6741ce12d683ce7/COPYING.md"
+        },
+        {
+          "path": "src/main/antlr/BSLLexer.g4",
+          "sha256": "421a6017ce9d78a1ef82a4853e8c89e652d376891686ba53f0a8ee6033fb51a4",
+          "url": "https://github.com/1c-syntax/bsl-parser/blob/3901c3364b80350bb86ff631e6741ce12d683ce7/src/main/antlr/BSLLexer.g4"
+        },
+        {
+          "path": "src/main/antlr/SDBLParser.g4",
+          "sha256": "5c56e681db1ecac85c338d328911b30ca78a956de150f80c717fe7912899331f",
+          "url": "https://github.com/1c-syntax/bsl-parser/blob/3901c3364b80350bb86ff631e6741ce12d683ce7/src/main/antlr/SDBLParser.g4"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "1c-syntax/bsl-language-server",
+      "url": "https://github.com/1c-syntax/bsl-language-server",
+      "role": "diagnostics",
+      "checked_on": "2026-10-21",
+      "branch": "develop",
+      "commit": "ab9a0b45e2aa28c67f9603ae9125dafe7273e523",
+      "commit_date": "2026-10-21T10:10:29Z",
+      "archived": false,
+      "github_license_detection": "NOASSERTION",
+      "observed_top_level_license": "LGPL-3.0",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "710506ad7a3b6454b856a19738ba7dc8d6073195932efa9e6813a147b04d658b",
+          "url": "https://github.com/1c-syntax/bsl-language-server/blob/ab9a0b45e2aa28c67f9603ae9125dafe7273e523/README.md"
+        },
+        {
+          "path": "COPYING.md",
+          "sha256": "a27d3e242d91483cc55cd35a3605aaeac2d9a6df7c06a5ffe24eabc9e0ec9d17",
+          "url": "https://github.com/1c-syntax/bsl-language-server/blob/ab9a0b45e2aa28c67f9603ae9125dafe7273e523/COPYING.md"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "1c-syntax/mdclasses",
+      "url": "https://github.com/1c-syntax/mdclasses",
+      "role": "metadata-tools",
+      "checked_on": "2026-10-21",
+      "branch": "develop",
+      "commit": "ea69cc0c076f51a2a6050bbc2171eeeb018ec8be",
+      "commit_date": "2026-10-12T11:04:20+02:00",
+      "archived": false,
+      "github_license_detection": "LGPL-3.0",
+      "observed_top_level_license": "LGPL-3.0",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "LICENCE",
+          "sha256": "a5681bf9b05db14d86776930017c647ad9e6e56ff6bbcfdf21e5848288dfaf1b",
+          "url": "https://github.com/1c-syntax/mdclasses/blob/ea69cc0c076f51a2a6050bbc2171eeeb018ec8be/LICENCE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "1c-syntax/bsl-context",
+      "url": "https://github.com/1c-syntax/bsl-context",
+      "role": "help-extractor",
+      "checked_on": "2026-10-21",
+      "branch": "master",
+      "commit": "143c78492f380e69ec94b63935eeac08e8b9c8aa",
+      "commit_date": "2026-10-12T20:50:10+10:00",
+      "archived": false,
+      "github_license_detection": "LGPL-3.0",
+      "observed_top_level_license": "LGPL-3.0",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "4abf6a45b6916f08c614fae2548e0f6369445df8653dda0a5968f0197095739c",
+          "url": "https://github.com/1c-syntax/bsl-context/blob/143c78492f380e69ec94b63935eeac08e8b9c8aa/README.md"
+        },
+        {
+          "path": "LICENSE.md",
+          "sha256": "a27d3e242d91483cc55cd35a3605aaeac2d9a6df7c06a5ffe24eabc9e0ec9d17",
+          "url": "https://github.com/1c-syntax/bsl-context/blob/143c78492f380e69ec94b63935eeac08e8b9c8aa/LICENSE.md"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "1c-syntax/1c-syntax",
+      "url": "https://github.com/1c-syntax/1c-syntax",
+      "role": "editor-resources",
+      "checked_on": "2026-10-21",
+      "branch": "master",
+      "commit": "ec07710783256fcf21a493efaa7bc9f8716682f2",
+      "commit_date": "2026-07-17T21:34:34Z",
+      "archived": false,
+      "github_license_detection": "MIT",
+      "observed_top_level_license": "MIT",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "cd31c89e7fca78c74e00cf7d1e6b1143de078caffd1fe14790ad7923d51945e9",
+          "url": "https://github.com/1c-syntax/1c-syntax/blob/ec07710783256fcf21a493efaa7bc9f8716682f2/README.md"
+        },
+        {
+          "path": "LICENSE.md",
+          "sha256": "eccc77185eb8eb1f20284f5823cdfce23b96eae7a29c8bd9689a39c60cd74093",
+          "url": "https://github.com/1c-syntax/1c-syntax/blob/ec07710783256fcf21a493efaa7bc9f8716682f2/LICENSE.md"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "covrom/gonec",
+      "url": "https://github.com/covrom/gonec",
+      "role": "go-language-runtime",
+      "checked_on": "2026-10-21",
+      "branch": "master",
+      "commit": "4a6722738b66dc2f127b19c021ea1f43254b4f0e",
+      "commit_date": "2022-12-03T09:11:43+03:00",
+      "archived": false,
+      "github_license_detection": "NOASSERTION",
+      "observed_top_level_license": "MIT",
+      "inspection": "selected-code",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "6e58435dda0feb5da2f442daabff7841ff521fa22db7eac426366f0fa128baff",
+          "url": "https://github.com/covrom/gonec/blob/4a6722738b66dc2f127b19c021ea1f43254b4f0e/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "8178b91865a19aba0eb2440d38ecaaadbc93fdf5a4f237bcbfdb7631840f2fcc",
+          "url": "https://github.com/covrom/gonec/blob/4a6722738b66dc2f127b19c021ea1f43254b4f0e/LICENSE"
+        },
+        {
+          "path": "go.mod",
+          "sha256": "a1097bf5ce5302068bba6ecdba1c45de5bdb441e9388152fcfffd5fa62911421",
+          "url": "https://github.com/covrom/gonec/blob/4a6722738b66dc2f127b19c021ea1f43254b4f0e/go.mod"
+        },
+        {
+          "path": "core/coreint.go",
+          "sha256": "579331246ab117f0bd89093865db7644609c82b74ac7d39569436e2df2493dea",
+          "url": "https://github.com/covrom/gonec/blob/4a6722738b66dc2f127b19c021ea1f43254b4f0e/core/coreint.go"
+        },
+        {
+          "path": "core/coredecnum.go",
+          "sha256": "016a38476bf2b05fd0a1d1af819543a134402c1582b87616c7814b07f44bebed",
+          "url": "https://github.com/covrom/gonec/blob/4a6722738b66dc2f127b19c021ea1f43254b4f0e/core/coredecnum.go"
+        },
+        {
+          "path": "core/coreifaces.go",
+          "sha256": "4a6bfa3662a0cce3c0e9860f08f90ffa1692608d1cd4cdec586ffe4a7379639c",
+          "url": "https://github.com/covrom/gonec/blob/4a6722738b66dc2f127b19c021ea1f43254b4f0e/core/coreifaces.go"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "yellow-hammer/namespace-forest",
+      "url": "https://github.com/yellow-hammer/namespace-forest",
+      "role": "schema-reference",
+      "checked_on": "2026-10-21",
+      "branch": "main",
+      "commit": "0023896332406bdc163f746daaf91756d26a54bd",
+      "commit_date": "2026-09-30T13:27:43Z",
+      "archived": false,
+      "github_license_detection": "NOASSERTION",
+      "observed_top_level_license": "mixed: proprietary product schemas; MIT repository tooling",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "f2e4777d2fdc2ed7fb7a16015f1f3ad224cf739c9124251cb2861ad81bf555ce",
+          "url": "https://github.com/yellow-hammer/namespace-forest/blob/0023896332406bdc163f746daaf91756d26a54bd/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "4df03d3fdd805e05cd3d6f9df405a1e4e0f01f8b353e5a5676f1287e841494c7",
+          "url": "https://github.com/yellow-hammer/namespace-forest/blob/0023896332406bdc163f746daaf91756d26a54bd/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "vanessa-opensource/vanessa-runner",
+      "url": "https://github.com/vanessa-opensource/vanessa-runner",
+      "role": "original-platform-runner",
+      "checked_on": "2026-10-21",
+      "branch": "develop",
+      "commit": "ffab87a9261e72ef8fe283fa7381b89782df9938",
+      "commit_date": "2026-09-25T11:00:51Z",
+      "archived": false,
+      "github_license_detection": "MPL-2.0",
+      "observed_top_level_license": "MPL-2.0",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "f24dde15a0618ba96f2c935c575465b63e27cfb4ae20d78ae5cb0a70ee54fbcb",
+          "url": "https://github.com/vanessa-opensource/vanessa-runner/blob/ffab87a9261e72ef8fe283fa7381b89782df9938/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+          "url": "https://github.com/vanessa-opensource/vanessa-runner/blob/ffab87a9261e72ef8fe283fa7381b89782df9938/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "oscript-library/1bdd",
+      "url": "https://github.com/oscript-library/1bdd",
+      "role": "test-tools",
+      "checked_on": "2026-10-21",
+      "branch": "develop",
+      "commit": "c6415db5c067f7eed83a37741c429903a59ca3d8",
+      "commit_date": "2022-04-02T13:03:59Z",
+      "archived": false,
+      "github_license_detection": "MPL-2.0",
+      "observed_top_level_license": "MPL-2.0",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "d23a07a9db0608f7275fc2b8daf844caff895ad30388ea94772b4e2916c55ea5",
+          "url": "https://github.com/oscript-library/1bdd/blob/c6415db5c067f7eed83a37741c429903a59ca3d8/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "9a381e233fb3606c9ba7ca3645778adcb000dc00bb884b3f9af2f00bb129924d",
+          "url": "https://github.com/oscript-library/1bdd/blob/c6415db5c067f7eed83a37741c429903a59ca3d8/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "xDrivenDevelopment/xUnitFor1C",
+      "url": "https://github.com/xDrivenDevelopment/xUnitFor1C",
+      "role": "test-tools",
+      "checked_on": "2026-10-21",
+      "branch": "develop",
+      "commit": "acdbe70417e16a1c02d1e16cfc0b409e11307848",
+      "commit_date": "2018-02-02T09:14:02Z",
+      "archived": false,
+      "github_license_detection": "Apache-2.0",
+      "observed_top_level_license": "Apache-2.0",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "004fdb767e8d4a93ec8f174d992f776ae393f19ab721e42d8aa87a8db648d29b",
+          "url": "https://github.com/xDrivenDevelopment/xUnitFor1C/blob/acdbe70417e16a1c02d1e16cfc0b409e11307848/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "c5d9829a11e7d1e9a58d58b713730de14f95ac89e0208577e6d5b4e291e2c904",
+          "url": "https://github.com/xDrivenDevelopment/xUnitFor1C/blob/acdbe70417e16a1c02d1e16cfc0b409e11307848/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "infostart-hub/infostart-erp-community",
+      "url": "https://github.com/infostart-hub/infostart-erp-community",
+      "role": "excluded-application",
+      "checked_on": "2026-10-21",
+      "branch": "master",
+      "commit": "5bbb0bacedffb6c3729c7ae0c767cd39a9fca3b4",
+      "commit_date": "2021-02-05T09:19:51Z",
+      "archived": false,
+      "github_license_detection": "NOASSERTION",
+      "observed_top_level_license": "custom restrictive license",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "4c006d10cfac2bcf6a1f9ef05384e336287bf8b150560a508afe79bfb3a5183a",
+          "url": "https://github.com/infostart-hub/infostart-erp-community/blob/5bbb0bacedffb6c3729c7ae0c767cd39a9fca3b4/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "1e2f5dc68536ea1bb4cd28bd5e13cc7295751ce8964aadeade583da87ca3de15",
+          "url": "https://github.com/infostart-hub/infostart-erp-community/blob/5bbb0bacedffb6c3729c7ae0c767cd39a9fca3b4/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "cpr1c/tools_ui_1c",
+      "url": "https://github.com/cpr1c/tools_ui_1c",
+      "role": "platform-api-examples",
+      "checked_on": "2026-10-21",
+      "branch": "develop",
+      "commit": "6794068f5bd59f292382102652473b35180b8b3e",
+      "commit_date": "2026-09-25T16:43:45Z",
+      "archived": false,
+      "github_license_detection": "GPL-3.0",
+      "observed_top_level_license": "GPL-3.0",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "6dae31342344c86a85b1d37e68002f6b20a13737ae2741019467a8ccdf792c64",
+          "url": "https://github.com/cpr1c/tools_ui_1c/blob/6794068f5bd59f292382102652473b35180b8b3e/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "192e6365c01db501db9236e06a36c2f885e7766a33e9d1dd0035e62195a430a2",
+          "url": "https://github.com/cpr1c/tools_ui_1c/blob/6794068f5bd59f292382102652473b35180b8b3e/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "wazero/wazero",
+      "url": "https://github.com/wazero/wazero",
+      "role": "wasm-runtime",
+      "checked_on": "2026-10-21",
+      "branch": "main",
+      "commit": "ef2dd2f85376c1a6ff79baae0cc1a5aa42c91db7",
+      "commit_date": "2026-10-19T22:35:59+02:00",
+      "archived": false,
+      "github_license_detection": "Apache-2.0",
+      "observed_top_level_license": "Apache-2.0",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "d1022ff06bbca66cb354966dd586d13d437627e938190236e2f80a044626c72b",
+          "url": "https://github.com/wazero/wazero/blob/ef2dd2f85376c1a6ff79baae0cc1a5aa42c91db7/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "c46f033d017a5af71a1de0105ec56c41bd47f81a0bbdf779fffe316336dc7c1f",
+          "url": "https://github.com/wazero/wazero/blob/ef2dd2f85376c1a6ff79baae0cc1a5aa42c91db7/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "ncruces/wasm2go",
+      "url": "https://github.com/ncruces/wasm2go",
+      "role": "wasm-translator",
+      "checked_on": "2026-10-21",
+      "branch": "main",
+      "commit": "3acef445bce9927a8e9a9534533ca0a025c94784",
+      "commit_date": "2026-10-16T15:42:15+01:00",
+      "archived": false,
+      "github_license_detection": "MIT",
+      "observed_top_level_license": "MIT",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "ac2f46a8809620c194270dc7e949ff9ca155998e11ca5b80f2907a53c58b019c",
+          "url": "https://github.com/ncruces/wasm2go/blob/3acef445bce9927a8e9a9534533ca0a025c94784/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "13b7919ffbff20b54d133748a783ade8b3ecb1810144194aad70928070f2c0df",
+          "url": "https://github.com/ncruces/wasm2go/blob/3acef445bce9927a8e9a9534533ca0a025c94784/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "shopspring/decimal",
+      "url": "https://github.com/shopspring/decimal",
+      "role": "decimal",
+      "checked_on": "2026-10-21",
+      "branch": "master",
+      "commit": "447b833d1eea2d7720d37ae95fcf090d01fa866b",
+      "commit_date": "2026-10-18T15:33:05Z",
+      "archived": false,
+      "github_license_detection": "NOASSERTION",
+      "observed_top_level_license": "MIT",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "fae0afe1b21d0fd563401c8401e1a37e7f128baeaf101ff11f260ecba88c1ec8",
+          "url": "https://github.com/shopspring/decimal/blob/447b833d1eea2d7720d37ae95fcf090d01fa866b/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "b92ba0f6ee02f2309628bfdadb123668a17c016e475ba477b857d33470d9d625",
+          "url": "https://github.com/shopspring/decimal/blob/447b833d1eea2d7720d37ae95fcf090d01fa866b/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "cockroachdb/apd",
+      "url": "https://github.com/cockroachdb/apd",
+      "role": "decimal",
+      "checked_on": "2026-10-21",
+      "branch": "master",
+      "commit": "0e59bffd422bc453283b3f2fc60b0dfbeca40282",
+      "commit_date": "2026-10-21T20:21:35Z",
+      "archived": false,
+      "github_license_detection": "Apache-2.0",
+      "observed_top_level_license": "Apache-2.0",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "66671cf3fa3824a066c8b759baf88b34d2ced046bb45a9b84da9ce49f37cfa1b",
+          "url": "https://github.com/cockroachdb/apd/blob/0e59bffd422bc453283b3f2fc60b0dfbeca40282/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "24f9c32c2d3b165c1f9eb4a8aa2c582412a06b3c0c4630f9c77c4f5a6c3937e5",
+          "url": "https://github.com/cockroachdb/apd/blob/0e59bffd422bc453283b3f2fc60b0dfbeca40282/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "antlr4-go/antlr",
+      "url": "https://github.com/antlr4-go/antlr",
+      "role": "parser-runtime",
+      "checked_on": "2026-10-21",
+      "branch": "main",
+      "commit": "4d7e18847d8881a176db3d7cca909e3f3942a05f",
+      "commit_date": "2024-05-15T15:52:48Z",
+      "archived": false,
+      "github_license_detection": "BSD-3-Clause",
+      "observed_top_level_license": "BSD-3-Clause",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "40a7ca52c3023275317b418964da009b5f8acc52fc359ead1921dbe5a9fb6466",
+          "url": "https://github.com/antlr4-go/antlr/blob/4d7e18847d8881a176db3d7cca909e3f3942a05f/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "683fcd416d83b64781e229a3c2a598462fbf55c5c9fea54be244766b22c033cf",
+          "url": "https://github.com/antlr4-go/antlr/blob/4d7e18847d8881a176db3d7cca909e3f3942a05f/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "jackc/pgx",
+      "url": "https://github.com/jackc/pgx",
+      "role": "sql-driver",
+      "checked_on": "2026-10-21",
+      "branch": "master",
+      "commit": "d6d4b01c11412cdf41a09ed127924fd13381b219",
+      "commit_date": "2026-10-17T16:01:51Z",
+      "archived": false,
+      "github_license_detection": "MIT",
+      "observed_top_level_license": "MIT",
+      "inspection": "metadata-only",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "d6b3602dcab5810c3d135dea492ae50ee7f2f30ca1cd337ab57682104a837c7d",
+          "url": "https://github.com/jackc/pgx/blob/d6d4b01c11412cdf41a09ed127924fd13381b219/README.md"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "modernc-org/sqlite",
+      "url": "https://github.com/modernc-org/sqlite",
+      "role": "embedded-sql",
+      "checked_on": "2026-10-21",
+      "branch": "master",
+      "commit": "9a8718ed5a7b75320951926f7132805b9b5e171c",
+      "commit_date": "2026-10-21T13:49:56Z",
+      "archived": false,
+      "github_license_detection": "BSD-3-Clause",
+      "observed_top_level_license": "BSD-3-Clause",
+      "inspection": "metadata-only",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "f655cbc954bd897275aa3a2333be39b3af5eec14c618d533d86fbde27994a2dc",
+          "url": "https://github.com/modernc-org/sqlite/blob/9a8718ed5a7b75320951926f7132805b9b5e171c/README.md"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "qax-os/excelize",
+      "url": "https://github.com/qax-os/excelize",
+      "role": "xlsx",
+      "checked_on": "2026-10-21",
+      "branch": "master",
+      "commit": "611b222fd8f78863a9932529340ebe03ebc8f237",
+      "commit_date": "2026-10-20T03:36:41Z",
+      "archived": false,
+      "github_license_detection": "BSD-3-Clause",
+      "observed_top_level_license": "BSD-3-Clause",
+      "inspection": "metadata-only",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "a8b1d1f688902348ff6affde78b3fdd9aa442d30a36f834045c52022c5dd2806",
+          "url": "https://github.com/qax-os/excelize/blob/611b222fd8f78863a9932529340ebe03ebc8f237/README.md"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "e8tools/tool1cd",
+      "url": "https://github.com/e8tools/tool1cd",
+      "role": "file-db-tools",
+      "checked_on": "2026-10-21",
+      "branch": "develop",
+      "commit": "d5e31816f4c9b11a445f73fc92d08803840ce599",
+      "commit_date": "2026-10-21T14:22:26+03:00",
+      "archived": false,
+      "github_license_detection": "GPL-3.0",
+      "observed_top_level_license": "GPL-3.0 top-level; inspect library and bundled components",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "34dc063c1ed3d0fb737f5ccc4e2b8969ac24ca614b29248cc8e690fb353b4e99",
+          "url": "https://github.com/e8tools/tool1cd/blob/d5e31816f4c9b11a445f73fc92d08803840ce599/README.md"
+        },
+        {
+          "path": "COPYING",
+          "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+          "url": "https://github.com/e8tools/tool1cd/blob/d5e31816f4c9b11a445f73fc92d08803840ce599/COPYING"
+        },
+        {
+          "path": "debian/copyright",
+          "sha256": "49424ab4b4b48b7b3fc9b4cae597f64bdd3275d2e278a868dfd22fa14af4032d",
+          "url": "https://github.com/e8tools/tool1cd/blob/d5e31816f4c9b11a445f73fc92d08803840ce599/debian/copyright"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "e8tools/v8unpack",
+      "url": "https://github.com/e8tools/v8unpack",
+      "role": "container-tools",
+      "checked_on": "2026-10-21",
+      "branch": "master",
+      "commit": null,
+      "commit_date": null,
+      "archived": false,
+      "github_license_detection": "MPL-2.0",
+      "observed_top_level_license": "MPL-2.0",
+      "inspection": "metadata-only",
+      "reviewed_files": [],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "saby-integration/v8unpack",
+      "url": "https://github.com/saby-integration/v8unpack",
+      "role": "container-tools",
+      "checked_on": "2026-10-21",
+      "branch": "main",
+      "commit": "51473807dc8f874e9b06d84f466fff0861f3c4ac",
+      "commit_date": "2026-09-14T12:24:56+03:00",
+      "archived": null,
+      "github_license_detection": null,
+      "observed_top_level_license": "MIT",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "259d9e1bef5933ada658271bbb8e6013744f571c37f2ece30ba98afdf253bc80",
+          "url": "https://github.com/saby-integration/v8unpack/blob/51473807dc8f874e9b06d84f466fff0861f3c4ac/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "1be2d2ecf61bb105a4bd4eb3529eb4855bbba4987c8871aeebccc1d05fc454c6",
+          "url": "https://github.com/saby-integration/v8unpack/blob/51473807dc8f874e9b06d84f466fff0861f3c4ac/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "alkoleft/tree-sitter-bsl",
+      "url": "https://github.com/alkoleft/tree-sitter-bsl",
+      "role": "bsl-sdbl-cst",
+      "checked_on": "2026-10-21",
+      "branch": "develop",
+      "commit": "5752667f4d40879a533c4ffe3005da10ff0b5e29",
+      "commit_date": "2026-05-26T22:41:35+03:00",
+      "archived": false,
+      "github_license_detection": "MIT",
+      "observed_top_level_license": "MIT",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "b089cd35d14941356d534ba768a9bb7cd4038e180771e71a2a237e49c33a9af4",
+          "url": "https://github.com/alkoleft/tree-sitter-bsl/blob/5752667f4d40879a533c4ffe3005da10ff0b5e29/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "bde905041b2021352e9ed5607fac1718bacb04cddc49d39376821517952c5c42",
+          "url": "https://github.com/alkoleft/tree-sitter-bsl/blob/5752667f4d40879a533c4ffe3005da10ff0b5e29/LICENSE"
+        },
+        {
+          "path": "package.json",
+          "sha256": "a0fa28269a708ec5530f1bbe9db0321ff73ac4b4d74f793f6ca49488ebc474b9",
+          "url": "https://github.com/alkoleft/tree-sitter-bsl/blob/5752667f4d40879a533c4ffe3005da10ff0b5e29/package.json"
+        },
+        {
+          "path": "Cargo.toml",
+          "sha256": "8474d277154463687e97b825ccb128009dd5c1e116dd80ff7b79142ffd807cb0",
+          "url": "https://github.com/alkoleft/tree-sitter-bsl/blob/5752667f4d40879a533c4ffe3005da10ff0b5e29/Cargo.toml"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "tree-sitter/go-tree-sitter",
+      "url": "https://github.com/tree-sitter/go-tree-sitter",
+      "role": "parser-binding-lead",
+      "checked_on": "2026-10-21",
+      "branch": "master",
+      "commit": null,
+      "commit_date": null,
+      "archived": false,
+      "github_license_detection": "MIT",
+      "observed_top_level_license": "MIT",
+      "inspection": "metadata-only",
+      "reviewed_files": [],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "1Ci-Company/Jet",
+      "url": "https://github.com/1Ci-Company/Jet",
+      "role": "example-corpus",
+      "checked_on": "2026-10-21",
+      "branch": "community",
+      "commit": "80884def67e2a75185452a6a13ff394075e457e0",
+      "commit_date": "2025-11-13T15:24:32Z",
+      "archived": null,
+      "github_license_detection": null,
+      "observed_top_level_license": "MIT",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "6a3b1f716032e54de87c777ce760d700906a367db384eebbde0fb8d8df9815eb",
+          "url": "https://github.com/1Ci-Company/Jet/blob/80884def67e2a75185452a6a13ff394075e457e0/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "a6ece14e4f899826eee4f45846cd1fcd06616f6de01be8271a9f8a0fb1ceef16",
+          "url": "https://github.com/1Ci-Company/Jet/blob/80884def67e2a75185452a6a13ff394075e457e0/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "1C-Company/v8-code-style",
+      "url": "https://github.com/1C-Company/v8-code-style",
+      "role": "diagnostics-lead",
+      "checked_on": "2026-10-21",
+      "branch": "master",
+      "commit": null,
+      "commit_date": null,
+      "archived": false,
+      "github_license_detection": "EPL-2.0",
+      "observed_top_level_license": "EPL-2.0",
+      "inspection": "metadata-only",
+      "reviewed_files": [],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "1C-Company/GitConverter",
+      "url": "https://github.com/1C-Company/GitConverter",
+      "role": "conversion-lead",
+      "checked_on": "2026-10-21",
+      "branch": "master",
+      "commit": null,
+      "commit_date": null,
+      "archived": false,
+      "github_license_detection": "CC-BY-SA-4.0",
+      "observed_top_level_license": "CC-BY-SA-4.0",
+      "inspection": "metadata-only",
+      "reviewed_files": [],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "bia-technologies/yaxunit",
+      "url": "https://github.com/bia-technologies/yaxunit",
+      "role": "test-tools",
+      "checked_on": "2026-10-21",
+      "branch": "develop",
+      "commit": "85d30d83d113f9f90017035509c0d57993f4b0c9",
+      "commit_date": "2026-10-06T23:07:25+03:00",
+      "archived": null,
+      "github_license_detection": null,
+      "observed_top_level_license": "Apache-2.0",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "1cc38f1b7c321e5fb57966011a6dea1de6e2fd121ec7149f531496710a005d1f",
+          "url": "https://github.com/bia-technologies/yaxunit/blob/85d30d83d113f9f90017035509c0d57993f4b0c9/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1",
+          "url": "https://github.com/bia-technologies/yaxunit/blob/85d30d83d113f9f90017035509c0d57993f4b0c9/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    },
+    {
+      "repository": "govalues/decimal",
+      "url": "https://github.com/govalues/decimal",
+      "role": "decimal",
+      "checked_on": "2026-10-21",
+      "branch": "main",
+      "commit": "377e9df6035e8b27bc4a31d1af6e23e29ca4adad",
+      "commit_date": "2025-01-19T00:00:54+04:00",
+      "archived": null,
+      "github_license_detection": null,
+      "observed_top_level_license": "MIT",
+      "inspection": "readme-and-license",
+      "reviewed_files": [
+        {
+          "path": "README.md",
+          "sha256": "56c941b0d70646bb96492f8d04913cc66da7cbb706afe96845d5abe992938ea8",
+          "url": "https://github.com/govalues/decimal/blob/377e9df6035e8b27bc4a31d1af6e23e29ca4adad/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "270fc25033eddb0174d7077c369c66f37dff5f3157eef6e7ccba5e298258e09f",
+          "url": "https://github.com/govalues/decimal/blob/377e9df6035e8b27bc4a31d1af6e23e29ca4adad/LICENSE"
+        }
+      ],
+      "executed": false,
+      "note": "No dependency approval; no full source or license audit."
+    }
+  ]
+}
