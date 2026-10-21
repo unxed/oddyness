@@ -18,7 +18,7 @@
 
 ### P01. Каркас запуска и быстрые проверки
 
-- Статус: in-progress — `ci` проверяет `gofmt`, `go vet ./...`, `go test ./...` и сборку Linux/Windows/macOS без CGO; ссылка на PR будет добавлена после его создания.
+- Статус: in-progress — PR https://github.com/unxed/oddyness/pull/1; ожидаются `gofmt`, `go vet ./...`, `go test ./...` и сборка Linux/Windows/macOS без CGO в `ci`.
 - Сделать: Go module, `cmd/oddyness`, команду `version`, минимальный CLI-dispatch;
   закрепить toolchain, совместимый с выбранной ревизией goWidgets, и CI без CGO.
 - Проверить: version возвращает версию; неизвестная команда — ненулевой код и
