@@ -334,7 +334,7 @@ func TestControlFlowParse(t *testing.T) {
 		t.Errorf("positions: if %v, while %v", st.Position(), w.Position())
 	}
 	// английские слова, регистр не важен, оператор после КонецЕсли без точки с запятой
-	mustParse(t, "Function F(Val X)\nWHILE X > 0 DO\nIF X = 1 THEN Break; ELSIF X = 2 THEN Continue; ELSE X = 0; ENDIF\nENDDO\nReturn X;\nEndFunction")
+	mustParse(t, "Function F(Val X)\nWHILE X > 0 DO\nIF X = 1 THEN Break; ELSIF X = 2 THEN Continue; ELSE X = 0; ENDIF\nENDDO;\nReturn X;\nEndFunction")
 	// Прервать внутри Если внутри цикла допустимо
 	mustParse(t, "Процедура П()\nПока Истина Цикл\nЕсли Истина Тогда\nПрервать;\nКонецЕсли;\nКонецЦикла;\nКонецПроцедуры")
 }
