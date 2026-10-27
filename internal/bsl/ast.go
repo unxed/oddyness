@@ -86,6 +86,13 @@ type (
 		Cond Expr
 		Body []Stmt
 	}
+	// ForEach — Для Каждого Var Из Coll Цикл … КонецЦикла.
+	ForEach struct {
+		Pos
+		Var  string
+		Coll Expr
+		Body []Stmt
+	}
 	// Break — Прервать; Continue — Продолжить (только внутри цикла).
 	Break    struct{ Pos }
 	Continue struct{ Pos }
@@ -93,6 +100,7 @@ type (
 
 func (*If) stmt()       {}
 func (*While) stmt()    {}
+func (*ForEach) stmt()  {}
 func (*Break) stmt()    {}
 func (*Continue) stmt() {}
 func (*Assign) stmt()   {}
@@ -126,6 +134,11 @@ type (
 		Pos
 		Kind ConstKind
 	}
+	// Member — чтение поля `Объект.Поле`; только имя.имя, без цепочек и записи.
+	Member struct {
+		Pos
+		Object, Field string
+	}
 	// Ident — обращение к переменной или параметру.
 	Ident struct {
 		Pos
@@ -155,6 +168,7 @@ func (*NumberLit) expr() {}
 func (*StringLit) expr() {}
 func (*ConstLit) expr()  {}
 func (*Ident) expr()     {}
+func (*Member) expr()    {}
 func (*Call) expr()      {}
 func (*Unary) expr()     {}
 func (*Binary) expr()    {}

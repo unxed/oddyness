@@ -6,6 +6,7 @@ package vm
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/unxed/oddyness/internal/bsl"
 	"github.com/unxed/oddyness/internal/value"
@@ -20,6 +21,9 @@ const (
 	Bool
 	Number
 	String
+	// Collection — таблица, переданная хостом (Table); Row — её строка.
+	Collection
+	Row
 )
 
 func (k Kind) String() string {
@@ -34,6 +38,10 @@ func (k Kind) String() string {
 		return "Number"
 	case String:
 		return "String"
+	case Collection:
+		return "Collection"
+	case Row:
+		return "Row"
 	}
 	return "?"
 }
@@ -44,6 +52,8 @@ type Value struct {
 	b    bool
 	num  value.Number
 	str  string
+	tbl  *Table // Collection и Row
+	i    int    // Row: номер строки; скрытые слоты итератора Для Каждого: позиция
 }
 
 // Конструкторы значений.
@@ -71,6 +81,10 @@ func (v Value) String() string {
 		return v.str
 	case Null:
 		return "Null"
+	case Collection:
+		return fmt.Sprintf("Collection(%d rows)", len(v.tbl.rows))
+	case Row:
+		return fmt.Sprintf("Row(%d)", v.i)
 	}
 	return "Неопределено"
 }
@@ -92,3 +106,42 @@ func (e *Error) Error() string {
 	}
 	return fmt.Sprintf("%s%d:%d: %s", prefix, e.Pos.Line, e.Pos.Col, e.Msg)
 }
+
+// Table — неизменяемая таблица, которую хост передаёт в BSL (например, табличная
+// часть документа). Это весь доступ BSL к данным хоста: перебор строк
+// `Для Каждого` и чтение полей `Строка.Колонка`. Имена колонок разрешены
+// заранее, регистр не важен; записи в таблицу, индексов и вызовов методов нет.
+type Table struct {
+	cols  []string
+	index map[string]int
+	rows  [][]Value
+}
+
+// NewTable проверяет таблицу: непустые различающиеся (без учёта регистра)
+// имена колонок и строки нужной длины. Данные копируются.
+func NewTable(columns []string, rows [][]Value) (*Table, error) {
+	t := &Table{cols: append([]string(nil), columns...), index: make(map[string]int, len(columns))}
+	for i, c := range columns {
+		key := strings.ToLower(c)
+		if key == "" {
+			return nil, fmt.Errorf("vm: column %d has an empty name", i)
+		}
+		if _, dup := t.index[key]; dup {
+			return nil, fmt.Errorf("vm: duplicate column %q", c)
+		}
+		t.index[key] = i
+	}
+	for i, r := range rows {
+		if len(r) != len(columns) {
+			return nil, fmt.Errorf("vm: row %d has %d values, want %d", i, len(r), len(columns))
+		}
+		t.rows = append(t.rows, append([]Value(nil), r...))
+	}
+	return t, nil
+}
+
+// Len возвращает число строк.
+func (t *Table) Len() int { return len(t.rows) }
+
+// TableValue оборачивает таблицу в значение BSL.
+func TableValue(t *Table) Value { return Value{kind: Collection, tbl: t} }

@@ -25,6 +25,8 @@ jobs:
         run: go test ./...
       - name: Benchmark exact numbers (informational output)
         run: go test -run '^$' -bench . -benchmem ./internal/value
+      - name: Benchmark BSL VM hot loops (informational output)
+        run: go test -run '^$' -bench . -benchmem ./internal/vm
       - name: Probe decimal candidates (separate module, informational output)
         working-directory: internal/value/probe
         env:
