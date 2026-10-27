@@ -17,6 +17,13 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - name: Resolve dependencies (temporary)
+        run: |
+          go mod edit -replace github.com/ebitengine/purego=github.com/unxed/pureffi@v0.1.19
+          go get github.com/unxed/goWidgets@5f71d2bacbd1403faed63595d028c0175bfc580f
+          go mod tidy
+          cat go.mod
+          cat go.sum
       - name: Verify module files are tidy
         run: |
           go mod tidy
