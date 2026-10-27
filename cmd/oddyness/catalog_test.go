@@ -258,7 +258,7 @@ func TestDocumentErrors(t *testing.T) {
 	seedProducts(t, db)
 	head := []string{"document", "add", configDir, db, "receipt", "Номер=R-1", "Дата=2026-10-27", "Комментарий=x"}
 	row := func(product, qty string) []string {
-		return []string{"--row", "items", "Товар=" + product, "Количество=" + qty}
+		return []string{"--row", "receipt-items", "Товар=" + product, "Количество=" + qty}
 	}
 	join := func(parts ...[]string) []string {
 		var out []string
@@ -279,7 +279,7 @@ func TestDocumentErrors(t *testing.T) {
 		{"duplicate number", join(head, row("1", "5")), 1, "duplicate value of a unique field"},
 		{"too precise second row", join([]string{"document", "add", configDir, db, "receipt", "Номер=R-2", "Дата=2026-10-27", "Комментарий=x"}, row("1", "1"), row("2", "0.0001")), 1, "fraction digits"},
 		{"zero quantity", join([]string{"document", "add", configDir, db, "receipt", "Номер=R-3", "Дата=2026-10-27", "Комментарий=x"}, row("1", "0")), 1, "greater than zero"},
-		{"missing product", join([]string{"document", "add", configDir, db, "receipt", "Номер=R-4", "Дата=2026-10-27", "Комментарий=x", "--row", "items", "Количество=1"}), 1, "required reference"},
+		{"missing product", join([]string{"document", "add", configDir, db, "receipt", "Номер=R-4", "Дата=2026-10-27", "Комментарий=x", "--row", "receipt-items", "Количество=1"}), 1, "required reference"},
 		{"missing product record", join([]string{"document", "add", configDir, db, "receipt", "Номер=R-5", "Дата=2026-10-27", "Комментарий=x"}, row("1", "1"), row("999", "1")), 1, "missing record"},
 		{"bad date", join([]string{"document", "add", configDir, db, "receipt", "Номер=R-6", "Дата=27.10.2026", "Комментарий=x"}), 1, "not a date"},
 		{"unknown table", join(head, []string{"--row", "nope", "Товар=1"}), 1, `has no table "nope"`},
