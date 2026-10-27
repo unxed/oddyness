@@ -302,3 +302,57 @@ func TestDocumentErrors(t *testing.T) {
 		t.Errorf("list after errors: %q", out)
 	}
 }
+
+func TestPostAndBalanceCommands(t *testing.T) {
+	db := filepath.Join(t.TempDir(), "db.sqlite")
+	if code, _, errs := cli(t, "db", "create", configDir, db); code != 0 {
+		t.Fatalf("db create: %d %q", code, errs)
+	}
+	seedProducts(t, db)
+	add := []string{"document", "add", configDir, db, "receipt", "Номер=R-1", "Дата=2026-10-27", "Комментарий=x",
+		"--row", "receipt-items", "Товар=1", "Количество=10.500", "--row", "receipt-items", "Товар=2", "Количество=2.250", "--row", "receipt-items", "Товар=1", "Количество=0.125"}
+	if code, out, errs := cli(t, add...); code != 0 || out != "id 1\n" {
+		t.Fatalf("add: %d %q %q", code, out, errs)
+	}
+	balance := []string{"register", "balance", configDir, db, "Запасы"}
+	// S02: до проведения остатков нет
+	if code, out, errs := cli(t, balance...); code != 0 || out != "" || errs != "" {
+		t.Fatalf("balance before posting: %d %q %q", code, out, errs)
+	}
+	post := []string{"document", "post", configDir, db, "receipt", "1"}
+	if code, out, errs := cli(t, post...); code != 0 || out != "posted 1\n" || errs != "" {
+		t.Fatalf("post: %d %q %q", code, out, errs)
+	}
+	want := "Товар=1 Количество=10.625\nТовар=2 Количество=2.250\n"
+	if code, out, _ := cli(t, balance...); code != 0 || out != want {
+		t.Errorf("balance after posting: %d %q", code, out)
+	}
+	if _, out, _ := cli(t, "document", "get", configDir, db, "receipt", "1"); !strings.HasPrefix(out, "1: Номер=\"R-1\"") || !strings.Contains(strings.SplitN(out, "\n", 2)[0], "[posted]") {
+		t.Errorf("document get does not show the status: %q", out)
+	}
+	// S05: повторное проведение не меняет остаток
+	if code, _, _ := cli(t, post...); code != 0 {
+		t.Fatal("re-post failed")
+	}
+	if _, out, _ := cli(t, balance...); out != want {
+		t.Errorf("balance after re-posting: %q", out)
+	}
+	// ошибки
+	for name, c := range map[string]struct {
+		args []string
+		code int
+		msg  string
+	}{
+		"no handler":       {[]string{"document", "post", configDir, db, "issue", "1"}, 1, "no posting handler"},
+		"unknown document": {[]string{"document", "post", configDir, db, "receipt", "99"}, 1, "record not found"},
+		"bad id":           {[]string{"document", "post", configDir, db, "receipt", "x"}, 1, `invalid id "x"`},
+		"unknown register": {[]string{"register", "balance", configDir, db, "нет"}, 1, `unknown register "нет"`},
+		"register usage":   {[]string{"register", "balance", configDir, db}, 2, "usage:"},
+		"register verb":    {[]string{"register", "drop", configDir, db, "Запасы"}, 2, "usage:"},
+	} {
+		code, out, errs := cli(t, c.args...)
+		if code != c.code || out != "" || !strings.Contains(errs, c.msg) {
+			t.Errorf("%s: exit=%d stdout=%q stderr=%q; want exit %d containing %q", name, code, out, errs, c.code, c.msg)
+		}
+	}
+}

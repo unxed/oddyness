@@ -24,6 +24,9 @@ const (
 	// Collection — таблица, переданная хостом (Table); Row — её строка.
 	Collection
 	Row
+	// Reference — ссылка на запись справочника (каталог и номер); BSL её только
+	// хранит, сравнивает на равенство и передаёт хосту.
+	Reference
 )
 
 func (k Kind) String() string {
@@ -42,6 +45,8 @@ func (k Kind) String() string {
 		return "Collection"
 	case Row:
 		return "Row"
+	case Reference:
+		return "Reference"
 	}
 	return "?"
 }
@@ -85,6 +90,8 @@ func (v Value) String() string {
 		return fmt.Sprintf("Collection(%d rows)", len(v.tbl.rows))
 	case Row:
 		return fmt.Sprintf("Row(%d)", v.i)
+	case Reference:
+		return fmt.Sprintf("%s#%d", v.str, v.i)
 	}
 	return "Неопределено"
 }
@@ -138,6 +145,24 @@ func NewTable(columns []string, rows [][]Value) (*Table, error) {
 		t.rows = append(t.rows, append([]Value(nil), r...))
 	}
 	return t, nil
+}
+
+// RefValue создаёт ссылку на запись справочника.
+func RefValue(catalog string, id int64) Value {
+	return Value{kind: Reference, str: catalog, i: int(id)}
+}
+
+// RefParts возвращает каталог и номер записи ссылки.
+func (v Value) RefParts() (catalog string, id int64) { return v.str, int64(v.i) }
+
+// NewRow создаёт строку с одной записью: columns — имена полей, values — их значения
+// (значением поля может быть и таблица). Так хост передаёт в BSL объект целиком.
+func NewRow(columns []string, values []Value) (Value, error) {
+	t, err := NewTable(columns, [][]Value{values})
+	if err != nil {
+		return Value{}, err
+	}
+	return Value{kind: Row, tbl: t, i: 0}, nil
 }
 
 // Len возвращает число строк.

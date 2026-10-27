@@ -17,6 +17,9 @@ const (
 // Options ограничивают выполнение. Нулевые значения означают пределы по умолчанию.
 type Options struct {
 	MaxSteps int64
+	// Host выполняет функцию хоста по имени, как оно объявлено в HostDecl.
+	// Ошибка прерывает выполнение BSL ошибкой времени выполнения с позицией вызова.
+	Host func(name string, args []Value) (Value, error)
 }
 
 type frame struct {
@@ -46,6 +49,9 @@ func (p *Program) NewMachine() *Machine {
 
 // Entry — разрешённая точка входа: имя ищется один раз.
 type Entry struct{ idx int }
+
+// NumParams возвращает число параметров точки входа.
+func (p *Program) NumParams(e Entry) int { return p.funcs[e.idx].nparams }
 
 // Entry находит подпрограмму по имени (регистр не важен).
 func (p *Program) Entry(name string) (Entry, error) {
@@ -194,6 +200,18 @@ func (m *Machine) Call(ctx context.Context, e Entry, args []Value, opt Options) 
 				return Value{}, err
 			}
 			m.stack = append(m.stack, r)
+		case opHost:
+			if opt.Host == nil {
+				return Value{}, rtErr(in.pos, "host function %q is not available", m.p.host[in.a].Name)
+			}
+			args := make([]Value, in.b)
+			copy(args, m.stack[len(m.stack)-in.b:])
+			m.stack = m.stack[:len(m.stack)-in.b]
+			res, err := opt.Host(m.p.host[in.a].Name, args)
+			if err != nil {
+				return Value{}, rtErr(in.pos, "%s: %v", m.p.host[in.a].Name, err)
+			}
+			m.stack = append(m.stack, res)
 		case opCall:
 			if len(m.frames) >= MaxCallDepth {
 				return Value{}, rtErr(in.pos, "call depth limit %d exceeded", MaxCallDepth)
@@ -260,6 +278,8 @@ func equal(a, b Value) bool {
 		return a.num.Cmp(b.num) == 0
 	case String:
 		return a.str == b.str
+	case Reference:
+		return a.str == b.str && a.i == b.i
 	}
 	return true // Неопределено = Неопределено, Null = Null
 }

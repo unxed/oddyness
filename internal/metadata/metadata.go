@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -64,12 +65,21 @@ type TablePart struct {
 	Fields []Field `json:"fields"`
 }
 
+// Posting — обработчик проведения: процедура BSL из файла каталога конфигурации.
+// Процедура принимает один параметр — документ (строка с полями шапки и табличными
+// частями по именам) и добавляет движения встроенной функцией Движение.
+type Posting struct {
+	File      string `json:"file"`
+	Procedure string `json:"procedure"`
+}
+
 // Document — вид документа: поля шапки и табличные части.
 type Document struct {
-	ID     string      `json:"id"`
-	Name   string      `json:"name"`
-	Fields []Field     `json:"fields"`
-	Tables []TablePart `json:"tables,omitempty"`
+	ID      string      `json:"id"`
+	Name    string      `json:"name"`
+	Fields  []Field     `json:"fields"`
+	Tables  []TablePart `json:"tables,omitempty"`
+	Posting *Posting    `json:"posting,omitempty"`
 }
 
 // Register — регистр накопления: измерения (по чему ведётся учёт) и ресурсы
@@ -316,6 +326,11 @@ func (m *Model) validate(fail failFunc) error {
 		if err := checkFields(dp, "fields", fmt.Sprintf("document %q", d.Name), d.Fields); err != nil {
 			return err
 		}
+		if d.Posting != nil {
+			if err := validatePosting(dp+".posting", d.Posting, fail); err != nil {
+				return err
+			}
+		}
 		tableNames := map[string]string{}
 		for k, tp := range d.Tables {
 			tpath := fmt.Sprintf("%s.tables[%d]", dp, k)
@@ -456,4 +471,32 @@ func (f Field) TypeString() string {
 		return fmt.Sprintf("ref(%s)", f.Target)
 	}
 	return string(f.Type)
+}
+
+// validatePosting проверяет описание обработчика: относительный путь внутри
+// каталога конфигурации и имя процедуры. Существование и разбор файла проверяет
+// платформа при открытии (метаданные не читают файлы).
+func validatePosting(path string, p *Posting, fail failFunc) error {
+	f := strings.ReplaceAll(p.File, "\\", "/")
+	switch {
+	case p.File == "":
+		return fail(-1, path+".file", "file is required")
+	case strings.HasPrefix(f, "/") || (len(f) > 1 && f[1] == ':'):
+		return fail(-1, path+".file", "file must be a relative path inside the configuration directory, got %q", p.File)
+	}
+	for _, part := range strings.Split(f, "/") {
+		if part == ".." || part == "" {
+			return fail(-1, path+".file", "file must be a clean relative path without \"..\" or empty parts, got %q", p.File)
+		}
+	}
+	if p.Procedure == "" {
+		return fail(-1, path+".procedure", "procedure is required")
+	}
+	for i, r := range p.Procedure {
+		letter := r == '_' || unicode.IsLetter(r)
+		if !letter && !(i > 0 && unicode.IsDigit(r)) {
+			return fail(-1, path+".procedure", "invalid procedure name %q", p.Procedure)
+		}
+	}
+	return nil
 }
