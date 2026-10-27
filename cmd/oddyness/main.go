@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -8,6 +9,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/unxed/oddyness/internal/bsl"
+	"github.com/unxed/oddyness/internal/value"
+	"github.com/unxed/oddyness/internal/vm"
 )
 
 var version = "dev"
@@ -35,26 +38,43 @@ func run(args []string, stdout, stderr io.Writer) int {
 	return 2
 }
 
-// runBSL выполняет `oddyness bsl check <file>`: разбор файла и диагностика.
-func runBSL(args []string, stdout, stderr io.Writer) int {
-	if len(args) != 2 || args[0] != "check" {
-		fmt.Fprintln(stderr, "usage: oddyness bsl check <file>")
-		return 2
-	}
-	path := args[1]
+// loadBSL читает и разбирает файл BSL (BOM допускается, не-UTF-8 отклоняется).
+// code != 0 — процесс должен завершиться с этим кодом, ошибка уже напечатана.
+func loadBSL(path string, stderr io.Writer) (m *bsl.Module, code int) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		fmt.Fprintf(stderr, "oddyness: %v\n", err)
-		return 2
+		return nil, 2
 	}
 	if !utf8.Valid(data) {
 		fmt.Fprintf(stderr, "%s: file is not valid UTF-8\n", path)
-		return 1
+		return nil, 1
 	}
-	m, err := bsl.Parse(strings.TrimPrefix(string(data), "\uFEFF"))
+	m, err = bsl.Parse(strings.TrimPrefix(string(data), "\uFEFF"))
 	if err != nil {
 		fmt.Fprintf(stderr, "%s:%v\n", path, err)
-		return 1
+		return nil, 1
+	}
+	return m, 0
+}
+
+// runBSL выполняет `oddyness bsl check <file>` и
+// `oddyness bsl run <file> <function> [args...]`.
+func runBSL(args []string, stdout, stderr io.Writer) int {
+	switch {
+	case len(args) == 2 && args[0] == "check":
+		return bslCheck(args[1], stdout, stderr)
+	case len(args) >= 3 && args[0] == "run":
+		return bslRun(args[1], args[2], args[3:], stdout, stderr)
+	}
+	fmt.Fprintln(stderr, "usage: oddyness bsl check <file> | oddyness bsl run <file> <function> [args...]")
+	return 2
+}
+
+func bslCheck(path string, stdout, stderr io.Writer) int {
+	m, code := loadBSL(path, stderr)
+	if m == nil {
+		return code
 	}
 	funcs := 0
 	for _, r := range m.Routines {
@@ -64,5 +84,34 @@ func runBSL(args []string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintf(stdout, "%s: ok, %d procedures, %d functions, %d module variable declarations\n",
 		path, len(m.Routines)-funcs, funcs, len(m.Vars))
+	return 0
+}
+
+// bslRun компилирует модуль и вызывает подпрограмму. Аргумент, записанный как
+// число (точный литерал), передаётся числом, любой другой — строкой.
+func bslRun(path, name string, rawArgs []string, stdout, stderr io.Writer) int {
+	m, code := loadBSL(path, stderr)
+	if m == nil {
+		return code
+	}
+	prog, err := vm.Compile(m)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", path, err)
+		return 1
+	}
+	args := make([]vm.Value, len(rawArgs))
+	for i, a := range rawArgs {
+		if n, perr := value.Parse(a); perr == nil {
+			args[i] = vm.NumberValue(n)
+		} else {
+			args[i] = vm.StringValue(a)
+		}
+	}
+	res, err := prog.Run(context.Background(), name, args, vm.Options{})
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", path, err)
+		return 1
+	}
+	fmt.Fprintln(stdout, res.String())
 	return 0
 }

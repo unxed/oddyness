@@ -102,3 +102,36 @@ func TestBSLCheckErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestBSLRun(t *testing.T) {
+	path := writeFile(t, "calc.bsl", "Функция Сумма(Знач А, Знач Б)\n\tВозврат А + Б;\nКонецФункции\n\nФункция Умножить(А)\n\tВозврат А * 2;\nКонецФункции\n\nФункция Неверно()\n\tВозврат 1 + \"а\";\nКонецФункции\n")
+	// Умножение в модуле не компилируется: весь модуль отклоняется явной ошибкой.
+	var stdout, stderr bytes.Buffer
+	if got := run(append([]string{"bsl", "run", path}, "Сумма", "1", "2"), &stdout, &stderr); got != 1 {
+		t.Fatalf("exit = %d, want 1", got)
+	}
+	if want := path + ": compile error: 6:12: operator * is not supported yet"; !strings.HasPrefix(stderr.String(), want) {
+		t.Errorf("stderr = %q, want prefix %q", stderr.String(), want)
+	}
+
+	good := writeFile(t, "good.bsl", "Функция Сумма(Знач А, Знач Б)\n\tВозврат А + Б;\nКонецФункции\n\nФункция Неверно()\n\tВозврат 1 + \"а\";\nКонецФункции\n\nФункция Привет(Имя)\n\tВозврат \"Привет, \" + Имя;\nКонецФункции\n")
+	for _, c := range []struct {
+		args   []string
+		code   int
+		stdout string
+		stderr string
+	}{
+		{[]string{"Сумма", "10.500", "2.250"}, 0, "12.750\n", ""},
+		{[]string{"сумма", "0.1", "0.2"}, 0, "0.3\n", ""},
+		{[]string{"Привет", "мир"}, 0, "Привет, мир\n", ""},
+		{[]string{"Неверно"}, 1, "", good + ": runtime error: 6:12: cannot add Number and String\n"},
+		{[]string{"Нет"}, 1, "", good + ": runtime error: unknown routine \"Нет\"\n"},
+		{[]string{"Сумма", "1"}, 1, "", good + ": runtime error: \"Сумма\" takes 2 arguments, got 1\n"},
+	} {
+		stdout.Reset()
+		stderr.Reset()
+		if got := run(append([]string{"bsl", "run", good}, c.args...), &stdout, &stderr); got != c.code || stdout.String() != c.stdout || stderr.String() != c.stderr {
+			t.Errorf("%v: exit=%d stdout=%q stderr=%q; want exit=%d stdout=%q stderr=%q", c.args, got, stdout.String(), stderr.String(), c.code, c.stdout, c.stderr)
+		}
+	}
+}
