@@ -28,7 +28,7 @@
 
 ### P02. Загрузка текстовой конфигурации
 
-- Статус: planned. Зависимости: P01.
+- Статус: сделано — PR https://github.com/unxed/oddyness/pull/9, коммит `5a664dd9c22958ad3e221a30cc2fef9ab1afa091`, `ci` успешен https://github.com/unxed/oddyness/actions/runs/40580401731 (`internal/metadata`, `oddyness config check`, формат — `docs/implementation/config-format.md`, снимок `testdata/configs/small-stock`; команды `go test ./internal/metadata ./cmd/oddyness`, `go run ./cmd/oddyness config check testdata/configs/small-stock`). Не сделано намеренно: документы, регистры, формы, BSL-файлы, миграции, импорт XML/EDT/cf. Зависимости: P01.
 - Сделать: версию JSON-формата, стабильные ID, один справочник с полями;
   `config check <dir>`, диагностику пути, запрет неизвестных полей/версии.
 - Проверить: корректный минимальный каталог; дубликат ID, битая ссылка,

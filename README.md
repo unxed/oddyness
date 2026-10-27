@@ -13,6 +13,7 @@
 приложения усилий, из которой можно вырастить платформу.
 
 Для локальной проверки из корня репозитория: `go run ./cmd/oddyness version`.
+Проверка конфигурации: `go run ./cmd/oddyness config check testdata/configs/small-stock` (формат — [config-format.md](docs/implementation/config-format.md)).
 Разбор BSL: `go run ./cmd/oddyness bsl check <файл>` (подмножество — [bsl-subset.md](docs/implementation/bsl-subset.md)).
 Минимальная проверка изменений: `go vet ./...` и `go test ./...`. На pull request
 workflow `ci` также собирает CLI для Linux, Windows и macOS с `CGO_ENABLED=0`.

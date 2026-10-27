@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/unxed/oddyness/internal/bsl"
+	"github.com/unxed/oddyness/internal/metadata"
 	"github.com/unxed/oddyness/internal/value"
 	"github.com/unxed/oddyness/internal/vm"
 )
@@ -23,6 +24,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 1 && args[0] == "version" {
 		fmt.Fprintf(stdout, "oddyness %s\n", version)
 		return 0
+	}
+
+	if len(args) > 0 && args[0] == "config" {
+		return runConfig(args[1:], stdout, stderr)
 	}
 
 	if len(args) > 0 && args[0] == "bsl" {
@@ -113,5 +118,27 @@ func bslRun(path, name string, rawArgs []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	fmt.Fprintln(stdout, res.String())
+	return 0
+}
+
+// runConfig выполняет `oddyness config check <dir>`: загрузка конфигурации и
+// список распознанных объектов либо адресная ошибка.
+func runConfig(args []string, stdout, stderr io.Writer) int {
+	if len(args) != 2 || args[0] != "check" {
+		fmt.Fprintln(stderr, "usage: oddyness config check <dir>")
+		return 2
+	}
+	m, err := metadata.Load(args[1])
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
+	fmt.Fprintf(stdout, "%s: ok, version %d, %d catalogs\n", args[1], m.Version, len(m.Catalogs))
+	for _, c := range m.Catalogs {
+		fmt.Fprintf(stdout, "catalog %s %q: %d fields\n", c.ID, c.Name, len(c.Fields))
+		for _, f := range c.Fields {
+			fmt.Fprintf(stdout, "  %s %s %s\n", f.ID, f.Name, f.TypeString())
+		}
+	}
 	return 0
 }
