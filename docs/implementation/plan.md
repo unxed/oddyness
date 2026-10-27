@@ -159,7 +159,7 @@
 
 ### P15. Минимальный общий Table в goWidgets
 
-- Статус: planned. Зависимости: P04.
+- Статус: сделано (готовый `goWidgets.Table` на закреплённой ревизии `5f71d2bacbd1` проверен: `internal/ui/tablecheck` на headless и upstream-тест `backends/gtk/tabletest` под Xvfb в `ci`; `docs/implementation/table.md`; PR https://github.com/unxed/oddyness/pull/15, `ci` https://github.com/unxed/oddyness/actions/runs/40587654959 на коммите `917581c3ac6cb032f972bdeaba738a27b0da8bbc`; команда `go test ./internal/ui/tablecheck`). Не проверено: Qt, Win32, Cocoa, сортировка по заголовку. Зависимости: P04.
 - Сделать: проверить текущий upstream/план zipgui, использовать готовый Table
   либо отдельным изменением добавить минимальную таблицу и выбор строки.
 - Проверить: заголовки, пустой набор, выбор/обновление, headless и один нативный
