@@ -59,7 +59,7 @@
 
 ### P05. Сохранение одного справочника
 
-- Статус: in-progress, часть 1 из 2 (хранилище `internal/storage/sqlite`: схема из метаданных, CRUD, уникальный код, типизированные ссылки, точные числа, отказ второй сессии и чужой версии схемы; `docs/implementation/storage.md`; PR https://github.com/unxed/oddyness/pull/10, код проверен `ci` https://github.com/unxed/oddyness/actions/runs/40581946317 на коммите `6903eb7e42b9e36a2eda5e70e09422beeb7ff51d`; команда `go test ./internal/storage/sqlite ./internal/metadata`). Часть 2: команды CLI (создать и прочитать товар новым процессом) и межпроцессная проверка блокировки. Зависимости: P02, P03.
+- Статус: сделано. Часть 2: PR https://github.com/unxed/oddyness/pull/11, код проверен `ci` https://github.com/unxed/oddyness/actions/runs/40582693390 на коммите `b13d0d636a21a9c2cd584cc8c7364cbc71418080` (команды `db create`, `catalog add/get/list`, межпроцессный тест блокировки; команда `go test ./cmd/oddyness ./internal/storage/sqlite`). Часть 1: PR https://github.com/unxed/oddyness/pull/10 (merge `d23e4b8afc9dc401ccb2b4b0ab191386ad2088cc`; хранилище `internal/storage/sqlite`, `docs/implementation/storage.md`; `ci` https://github.com/unxed/oddyness/actions/runs/40582192758). Зависимости: P02, P03.
 - Сделать: SQLite без CGO, создание новой БД из метаданных, CRUD через ядро,
   типизированные ссылки, уникальный код; блокировку второй локальной сессии.
 - Проверить: запись/чтение/перезапуск, дубликат кода, неизвестный ID,
