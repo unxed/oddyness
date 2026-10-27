@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -39,5 +41,64 @@ func TestRunWithoutCommand(t *testing.T) {
 	}
 	if got := stderr.String(); !strings.Contains(got, "usage: oddyness <command>") {
 		t.Fatalf("stderr = %q, want usage", got)
+	}
+}
+
+func writeFile(t *testing.T, name, content string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), name)
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestBSLCheckOK(t *testing.T) {
+	src := "Функция Сумма(А, Б) Экспорт\n\tВозврат А + Б;\nКонецФункции\n\nПроцедура П()\nКонецПроцедуры\n"
+	// файл с BOM, как их пишет конфигуратор
+	for name, content := range map[string]string{"plain.bsl": src, "bom.bsl": "\uFEFF" + src} {
+		path := writeFile(t, name, content)
+		var stdout, stderr bytes.Buffer
+		if got := run([]string{"bsl", "check", path}, &stdout, &stderr); got != 0 {
+			t.Fatalf("%s: exit = %d, stderr = %q", name, got, stderr.String())
+		}
+		want := path + ": ok, 1 procedures, 1 functions, 0 module variable declarations\n"
+		if stdout.String() != want || stderr.String() != "" {
+			t.Errorf("%s: stdout = %q, stderr = %q, want stdout %q", name, stdout.String(), stderr.String(), want)
+		}
+	}
+}
+
+func TestBSLCheckDiagnostics(t *testing.T) {
+	path := writeFile(t, "bad.bsl", "Процедура П()\n  Если Истина Тогда\nКонецПроцедуры\n")
+	var stdout, stderr bytes.Buffer
+	if got := run([]string{"bsl", "check", path}, &stdout, &stderr); got != 1 {
+		t.Fatalf("exit = %d, want 1", got)
+	}
+	want := path + `:2:3: "Если" statement is not supported` + "\n"
+	if stderr.String() != want || stdout.String() != "" {
+		t.Errorf("stderr = %q, stdout = %q, want stderr %q", stderr.String(), stdout.String(), want)
+	}
+}
+
+func TestBSLCheckErrors(t *testing.T) {
+	bad := writeFile(t, "latin1.bsl", "Процедура П()\n\xff\nКонецПроцедуры\n")
+	for name, args := range map[string][]string{
+		"no file":      {"bsl", "check"},
+		"extra":        {"bsl", "check", "a", "b"},
+		"wrong verb":   {"bsl", "run", "a"},
+		"no subcmd":    {"bsl"},
+		"missing file": {"bsl", "check", filepath.Join(t.TempDir(), "absent.bsl")},
+		"bad utf8":     {"bsl", "check", bad},
+	} {
+		var stdout, stderr bytes.Buffer
+		got := run(args, &stdout, &stderr)
+		wantCode := 2
+		if name == "bad utf8" {
+			wantCode = 1
+		}
+		if got != wantCode || stdout.String() != "" || stderr.Len() == 0 {
+			t.Errorf("%s: exit = %d, stdout = %q, stderr = %q", name, got, stdout.String(), stderr.String())
+		}
 	}
 }
