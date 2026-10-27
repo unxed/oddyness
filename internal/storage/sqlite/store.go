@@ -49,11 +49,8 @@ var (
 	ErrExists = errors.New("sqlite: database file already exists")
 )
 
-// Ref — типизированная ссылка на запись справочника.
-type Ref struct {
-	Catalog string
-	ID      int64
-}
+// Ref — типизированная ссылка на запись справочника (value.Ref).
+type Ref = value.Ref
 
 // Record — запись справочника; Values индексированы по id поля метаданных.
 // Типы значений: string, bool, value.Number, Ref (или nil для пустой ссылки).
@@ -268,11 +265,8 @@ func encode(f metadata.Field, v any) (any, error) {
 		if !ok {
 			return nil, invalid("field %q: expected value.Number, got %T", f.ID, v)
 		}
-		if n.Scale() > f.Scale {
-			return nil, invalid("field %q: %s has %d fraction digits, the field allows %d (values are never rounded)", f.ID, n, n.Scale(), f.Scale)
-		}
-		if d := integerDigits(n); d > f.Digits-f.Scale {
-			return nil, invalid("field %q: %s has %d integer digits, the field allows %d", f.ID, n, d, f.Digits-f.Scale)
+		if err := n.CheckPrecision(f.Digits, f.Scale); err != nil {
+			return nil, invalid("field %q: %v", f.ID, err)
 		}
 		return n.String(), nil
 	default: // ref
@@ -288,16 +282,6 @@ func encode(f metadata.Field, v any) (any, error) {
 		}
 		return r.ID, nil
 	}
-}
-
-// integerDigits — число цифр целой части без ведущих нулей (0 для |n| < 1).
-func integerDigits(n value.Number) int {
-	s := strings.TrimPrefix(n.String(), "-")
-	if i := strings.IndexByte(s, '.'); i >= 0 {
-		s = s[:i]
-	}
-	s = strings.TrimLeft(s, "0")
-	return len(s)
 }
 
 // encodeAll проверяет, что заданы ровно поля справочника, и кодирует значения
