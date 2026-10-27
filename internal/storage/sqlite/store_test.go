@@ -43,7 +43,7 @@ func goods(t testing.TB, code, title string, min string) map[string]any {
 	}
 }
 
-func newStore(t *testing.T) (*Store, string) {
+func openTemp(t *testing.T) (*Store, string) {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "db.sqlite")
 	s, err := Create(path, loadModel(t))
@@ -56,7 +56,7 @@ func newStore(t *testing.T) (*Store, string) {
 
 func TestInsertGetAndRestart(t *testing.T) {
 	m := loadModel(t)
-	s, path := newStore(t)
+	s, path := openTemp(t)
 	in := goods(t, "K-1", "Кабель", "10.500")
 	id, err := s.Insert(ctx, "goods", in)
 	if err != nil || id == 0 {
@@ -101,7 +101,7 @@ func TestInsertGetAndRestart(t *testing.T) {
 }
 
 func TestNumbersAreExactAndNeverRounded(t *testing.T) {
-	s, _ := newStore(t)
+	s, _ := openTemp(t)
 	for i, lit := range []string{"999999999999.999", "-999999999999.999", "0.001", "0", "12345.670", "0.1"} {
 		id, err := s.Insert(ctx, "goods", goods(t, "N"+lit, "т", lit))
 		if err != nil {
@@ -136,7 +136,7 @@ func TestNumbersAreExactAndNeverRounded(t *testing.T) {
 }
 
 func TestUniqueCode(t *testing.T) {
-	s, _ := newStore(t)
+	s, _ := openTemp(t)
 	id1, _ := s.Insert(ctx, "goods", goods(t, "K-1", "Кабель", "1"))
 	id2, err := s.Insert(ctx, "goods", goods(t, "K-2", "Шнур", "2"))
 	if err != nil {
@@ -169,7 +169,7 @@ func TestUniqueCode(t *testing.T) {
 }
 
 func TestInvalidInput(t *testing.T) {
-	s, _ := newStore(t)
+	s, _ := openTemp(t)
 	good := func() map[string]any { return goods(t, "K-1", "Кабель", "1") }
 	mutate := func(f func(m map[string]any)) map[string]any { m := good(); f(m); return m }
 	cases := map[string]map[string]any{
@@ -211,7 +211,7 @@ func TestInvalidInput(t *testing.T) {
 }
 
 func TestReferences(t *testing.T) {
-	s, _ := newStore(t)
+	s, _ := openTemp(t)
 	a, _ := s.Insert(ctx, "goods", goods(t, "A", "а", "1"))
 	in := goods(t, "B", "б", "1")
 	in["goods-analog"] = Ref{Catalog: "goods", ID: a}
@@ -239,7 +239,7 @@ func TestReferences(t *testing.T) {
 }
 
 func TestValuesRoundTrip(t *testing.T) {
-	s, _ := newStore(t)
+	s, _ := openTemp(t)
 	in := goods(t, "x'; DROP TABLE \"cat_goods\"; --", "Кабель «медный» \"2×1,5\"\nвторая строка", "7")
 	in["goods-active"] = false
 	id, err := s.Insert(ctx, "goods", in)
@@ -254,7 +254,7 @@ func TestValuesRoundTrip(t *testing.T) {
 
 func TestSecondSessionIsRefused(t *testing.T) {
 	m := loadModel(t)
-	s, path := newStore(t)
+	s, path := openTemp(t)
 	if _, err := s.Insert(ctx, "goods", goods(t, "K-1", "Кабель", "1")); err != nil {
 		t.Fatal(err)
 	}
@@ -283,7 +283,7 @@ func TestSecondSessionIsRefused(t *testing.T) {
 
 func TestOpenRefusals(t *testing.T) {
 	m := loadModel(t)
-	s, path := newStore(t)
+	s, path := openTemp(t)
 	s.Close()
 
 	other := loadModel(t)
