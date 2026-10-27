@@ -159,7 +159,7 @@
 
 ### P15. Минимальный общий Table в goWidgets
 
-- Статус: planned. Зависимости: P04.
+- Статус: in-progress (готовый `goWidgets.Table` на закреплённой ревизии `5f71d2bacbd1` проверен: `internal/ui/tablecheck` на headless и upstream-тест `backends/gtk/tabletest` под Xvfb в `ci`; `docs/implementation/table.md`; PR и `ci` будут добавлены после прогона). Зависимости: P04.
 - Сделать: проверить текущий upstream/план zipgui, использовать готовый Table
   либо отдельным изменением добавить минимальную таблицу и выбор строки.
 - Проверить: заголовки, пустой набор, выбор/обновление, headless и один нативный
