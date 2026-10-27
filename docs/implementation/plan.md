@@ -88,7 +88,7 @@
 
 ### P08. Компиляция выражений и маленькая VM
 
-- Статус: in-progress, часть 2 из 2 (`*`, `/`, `%`: точные `Number.Mul/Div/Mod`, неточное частное и деление на нуль — ошибки; commit/PR и `ci` будут добавлены после прогона). Часть 1 завершена: PR https://github.com/unxed/oddyness/pull/5 (merge `5218f74ceb17a2fd220ddcd487e39f0f5d7775be`, `ci` https://github.com/unxed/oddyness/actions/runs/40576541821; ядро VM, `bsl run`; команды `go test ./internal/vm ./cmd/oddyness`, `go run ./cmd/oddyness bsl run <файл> <функция> [аргументы]`). Зависимости: P07.
+- Статус: сделано. Часть 2: PR https://github.com/unxed/oddyness/pull/6, коммит `7a2a53e415d86de9745fd69336acaf1ba53829ae`, `ci` успешен https://github.com/unxed/oddyness/actions/runs/40577284949 (`*`, `/`, `%`: точные `Number.Mul/Div/Mod`, неточное частное и деление на нуль — ошибки; команда `go test ./internal/value ./internal/vm ./cmd/oddyness`). Часть 1: PR https://github.com/unxed/oddyness/pull/5 (merge `5218f74ceb17a2fd220ddcd487e39f0f5d7775be`, `ci` https://github.com/unxed/oddyness/actions/runs/40576541821; ядро VM, `bsl run`; команды `go test ./internal/vm ./cmd/oddyness`, `go run ./cmd/oddyness bsl run <файл> <функция> [аргументы]`). Зависимости: P07.
 - Сделать: константы, слоты, вызов функции, возврат, арифметику и сравнение;
   явные ошибки типов и деления на ноль; лимит шагов и отмену выполнения.
 - Проверить: небольшие BSL-функции с независимыми ожидаемыми значениями,
