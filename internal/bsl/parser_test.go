@@ -364,7 +364,7 @@ func TestForEachAndMemberParse(t *testing.T) {
 	}
 	as := fe.Body[1].(*Assign)
 	mem := as.Value.(*Binary).Y.(*Member)
-	if mem.Object != "Стр" || mem.Field != "Количество" || mem.Position() != (Pos{6, 11}) {
+	if mem.Object != "Стр" || mem.Field != "Количество" || mem.Position() != (Pos{7, 11}) {
 		t.Errorf("member: %+v at %v", mem, mem.Position())
 	}
 	mustParse(t, "Procedure P(T)\nFOR EACH R IN T DO\nBreak;\nENDDO;\nEndProcedure")
