@@ -30,11 +30,19 @@ jobs:
       - name: Install GTK, Xvfb and xdotool
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libgtk-3-0 xvfb xdotool
+          sudo apt-get install -y --no-install-recommends libgtk-3-0 xvfb xdotool scrot
       - name: Native GTK form scenarios (real window, real keystrokes, two parallel processes)
         env:
           ODDYNESS_NATIVE_UI: "1"
+          ODDYNESS_ARTIFACT_DIR: ${{ runner.temp }}/native-shots
         run: go test -count=1 -v -run 'TestNativeForm' ./cmd/oddyness
+      - name: Upload native screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-shots
+          path: ${{ runner.temp }}/native-shots
+          if-no-files-found: warn
       - name: Benchmark exact numbers (informational output)
         run: go test -run '^$' -bench . -benchmem ./internal/value
       - name: Benchmark BSL VM hot loops (informational output)

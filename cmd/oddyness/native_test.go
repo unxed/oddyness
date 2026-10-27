@@ -38,6 +38,20 @@ func (x xdo) run(args ...string) string {
 	return strings.TrimSpace(string(out))
 }
 
+// shot сохраняет снимок экрана в каталог артефактов CI (если он задан).
+func (x xdo) shot(name string) {
+	dir := os.Getenv("ODDYNESS_ARTIFACT_DIR")
+	if dir == "" {
+		return
+	}
+	os.MkdirAll(dir, 0o755)
+	cmd := exec.Command("scrot", "-o", filepath.Join(dir, strings.ReplaceAll(name, " ", "-")+".png"))
+	cmd.Env = append(os.Environ(), "DISPLAY="+x.display)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		x.t.Logf("scrot: %v\n%s", err, out)
+	}
+}
+
 func (x xdo) key(keys ...string) {
 	x.t.Helper()
 	x.run(append([]string{"key", "--delay", "40"}, keys...)...)
@@ -142,9 +156,11 @@ func runNative(t *testing.T, display int, name string, script scenario, check fu
 	x.run("windowfocus", "--sync", window)
 	time.Sleep(300 * time.Millisecond)
 
+	x.shot(name + "-before")
 	script(x, window, alive)
+	x.shot(name + "-after")
 
-	deadline := time.After(30 * time.Second)
+	deadline := time.After(15 * time.Second)
 	for alive() {
 		select {
 		case <-deadline:
