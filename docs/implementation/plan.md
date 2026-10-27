@@ -110,7 +110,7 @@
 
 ### P10. Черновик документа с табличной частью
 
-- Статус: planned. Зависимости: P05.
+- Статус: сделано (метаданные документов и табличных частей, типы `date`, `positive`, `required`, атомарная запись шапки со строками `InsertDocument`/`UpdateDocument`, откат, запрет удаления используемого товара, CLI `oddyness document`; `docs/implementation/storage.md`, `config-format.md`; PR https://github.com/unxed/oddyness/pull/16, `ci` https://github.com/unxed/oddyness/actions/runs/40589224221 на коммите `c6aadc3701233cbde951d2388ed3cab022065cf9`; команды `go test ./internal/storage/sqlite ./internal/metadata ./cmd/oddyness`). Не сделано намеренно: проведение и остатки (P11/P12), форма документа в GUI (P16), удаление и редактирование через CLI. Зависимости: P05.
 - Сделать: метаданные документа и строк, номера/даты, валидацию ссылок и
   количества, атомарную запись шапки со строками через API и CLI.
 - Проверить: две строки, дубликат номера, недопустимая точность, rollback

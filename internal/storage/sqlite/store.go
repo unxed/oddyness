@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	_ "modernc.org/sqlite" // драйвер database/sql "sqlite"
 
@@ -67,7 +68,34 @@ type Store struct {
 }
 
 func tableName(catalogID string) string { return `"cat_` + catalogID + `"` }
-func columnName(fieldID string) string  { return `"f_` + fieldID + `"` }
+
+// docTable и partTable — таблицы шапок и табличных частей документов. Точка в
+// имени таблицы допустима в кавычках и не бывает в идентификаторах метаданных,
+// поэтому имена не пересекаются.
+func docTable(docID string) string           { return `"doc_` + docID + `"` }
+func partTable(docID, tableID string) string { return `"doc_` + docID + `.` + tableID + `"` }
+
+// columnDefs возвращает определения столбцов полей, внешние ключи и уникальные
+// индексы таблицы table; prefix — часть имени индекса.
+func columnDefs(prefix, table string, fields []metadata.Field) (cols, tail, indexes []string) {
+	for _, f := range fields {
+		col := columnName(f.ID)
+		switch f.Type {
+		case metadata.TypeBoolean:
+			cols = append(cols, col+` INTEGER NOT NULL CHECK (`+col+` IN (0, 1))`)
+		case metadata.TypeRef:
+			cols = append(cols, col+` INTEGER`)
+			tail = append(tail, fmt.Sprintf(`FOREIGN KEY (%s) REFERENCES %s("id")`, col, tableName(f.Target)))
+		default: // string, number, date: текст; число хранится точной десятичной записью
+			cols = append(cols, col+` TEXT NOT NULL`)
+		}
+		if f.Unique {
+			indexes = append(indexes, fmt.Sprintf(`CREATE UNIQUE INDEX "u_%s_%s" ON %s(%s)`, prefix, f.ID, table, col))
+		}
+	}
+	return cols, tail, indexes
+}
+func columnName(fieldID string) string { return `"f_` + fieldID + `"` }
 
 // fingerprint — хеш канонической записи модели: база привязана к конфигурации.
 func fingerprint(m *metadata.Model) (string, error) {
@@ -159,24 +187,22 @@ func (s *Store) createSchema(fp string) error {
 	defer tx.Rollback()
 	stmts := []string{`CREATE TABLE oddyness_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`}
 	for _, c := range s.model.Catalogs {
-		cols := []string{`"id" INTEGER PRIMARY KEY`}
-		var tail []string
-		for _, f := range c.Fields {
-			col := columnName(f.ID)
-			switch f.Type {
-			case metadata.TypeBoolean:
-				cols = append(cols, col+` INTEGER NOT NULL CHECK (`+col+` IN (0, 1))`)
-			case metadata.TypeRef:
-				cols = append(cols, col+` INTEGER`)
-				tail = append(tail, fmt.Sprintf(`FOREIGN KEY (%s) REFERENCES %s("id")`, col, tableName(f.Target)))
-			default: // string, number: текст; число хранится точной десятичной записью
-				cols = append(cols, col+` TEXT NOT NULL`)
-			}
-			if f.Unique {
-				stmts = append(stmts, fmt.Sprintf(`CREATE UNIQUE INDEX "u_%s_%s" ON %s(%s)`, c.ID, f.ID, tableName(c.ID), col))
-			}
+		cols, tail, indexes := columnDefs("cat_"+c.ID, tableName(c.ID), c.Fields)
+		stmts = append(stmts, fmt.Sprintf(`CREATE TABLE %s (%s)`, tableName(c.ID), strings.Join(append([]string{`"id" INTEGER PRIMARY KEY`}, append(cols, tail...)...), ", ")))
+		stmts = append(stmts, indexes...)
+	}
+	for _, d := range s.model.Documents {
+		cols, tail, indexes := columnDefs("doc_"+d.ID, docTable(d.ID), d.Fields)
+		stmts = append(stmts, fmt.Sprintf(`CREATE TABLE %s (%s)`, docTable(d.ID), strings.Join(append([]string{`"id" INTEGER PRIMARY KEY`}, append(cols, tail...)...), ", ")))
+		stmts = append(stmts, indexes...)
+		for _, t := range d.Tables {
+			name := partTable(d.ID, t.ID)
+			cols, tail, indexes := columnDefs("part_"+d.ID+"_"+t.ID, name, t.Fields)
+			head := []string{`"id" INTEGER PRIMARY KEY`, `"owner" INTEGER NOT NULL REFERENCES ` + docTable(d.ID) + `("id") ON DELETE CASCADE`, `"line" INTEGER NOT NULL`}
+			tail = append(tail, `UNIQUE ("owner", "line")`)
+			stmts = append(stmts, fmt.Sprintf(`CREATE TABLE %s (%s)`, name, strings.Join(append(head, append(cols, tail...)...), ", ")))
+			stmts = append(stmts, indexes...)
 		}
-		stmts = append([]string{fmt.Sprintf(`CREATE TABLE %s (%s)`, tableName(c.ID), strings.Join(append(cols, tail...), ", "))}, stmts...)
 	}
 	for _, q := range stmts {
 		if _, err := tx.Exec(q); err != nil {
@@ -268,9 +294,24 @@ func encode(f metadata.Field, v any) (any, error) {
 		if err := n.CheckPrecision(f.Digits, f.Scale); err != nil {
 			return nil, invalid("field %q: %v", f.ID, err)
 		}
+		if f.Positive && n.Sign() <= 0 {
+			return nil, invalid("field %q: %s must be greater than zero", f.ID, n)
+		}
 		return n.String(), nil
+	case metadata.TypeDate:
+		str, ok := v.(string)
+		if !ok {
+			return nil, invalid("field %q: expected a date string, got %T", f.ID, v)
+		}
+		if _, err := time.Parse("2006-01-02", str); err != nil {
+			return nil, invalid("field %q: %q is not a date YYYY-MM-DD", f.ID, str)
+		}
+		return str, nil
 	default: // ref
 		if v == nil {
+			if f.Required {
+				return nil, invalid("field %q: the reference is required", f.ID)
+			}
 			return nil, nil
 		}
 		r, ok := v.(Ref)
@@ -287,11 +328,19 @@ func encode(f metadata.Field, v any) (any, error) {
 // encodeAll проверяет, что заданы ровно поля справочника, и кодирует значения
 // в порядке полей метаданных.
 func encodeAll(c *metadata.Catalog, values map[string]any) ([]any, error) {
-	known := make(map[string]bool, len(c.Fields))
-	out := make([]any, 0, len(c.Fields))
-	for _, f := range c.Fields {
+	return encodeFields("catalog "+c.ID, c.Fields, values)
+}
+
+// encodeFields — то же для произвольного списка полей; owner попадает в сообщения.
+func encodeFields(owner string, fields []metadata.Field, values map[string]any) ([]any, error) {
+	known := make(map[string]bool, len(fields))
+	out := make([]any, 0, len(fields))
+	for _, f := range fields {
 		known[f.ID] = true
 		v, present := values[f.ID]
+		if !present && f.Type == metadata.TypeRef && f.Required {
+			return nil, invalid("missing value for required reference %q", f.ID)
+		}
 		if !present {
 			if f.Type == metadata.TypeRef {
 				out = append(out, nil) // пустая ссылка допустима
@@ -307,7 +356,7 @@ func encodeAll(c *metadata.Catalog, values map[string]any) ([]any, error) {
 	}
 	for id := range values {
 		if !known[id] {
-			return nil, invalid("unknown field %q in catalog %q", id, c.ID)
+			return nil, invalid("unknown field %q in %s", id, owner)
 		}
 	}
 	return out, nil
@@ -316,12 +365,16 @@ func encodeAll(c *metadata.Catalog, values map[string]any) ([]any, error) {
 // checkUnique проверяет уникальные поля внутри транзакции; except — запись,
 // которую обновляют (0 — новая).
 func (s *Store) checkUnique(ctx context.Context, tx *sql.Tx, c *metadata.Catalog, encoded []any, except int64) error {
-	for i, f := range c.Fields {
+	return checkUniqueIn(ctx, tx, tableName(c.ID), c.Fields, encoded, except)
+}
+
+func checkUniqueIn(ctx context.Context, tx *sql.Tx, table string, fields []metadata.Field, encoded []any, except int64) error {
+	for i, f := range fields {
 		if !f.Unique {
 			continue
 		}
 		var one int
-		err := tx.QueryRowContext(ctx, fmt.Sprintf(`SELECT 1 FROM %s WHERE %s = ? AND "id" <> ?`, tableName(c.ID), columnName(f.ID)), encoded[i], except).Scan(&one)
+		err := tx.QueryRowContext(ctx, fmt.Sprintf(`SELECT 1 FROM %s WHERE %s = ? AND "id" <> ?`, table, columnName(f.ID)), encoded[i], except).Scan(&one)
 		switch {
 		case err == nil:
 			return fmt.Errorf("%w: field %q value %q", ErrDuplicate, f.ID, encoded[i])
@@ -452,10 +505,15 @@ func (s *Store) selectSQL(c *metadata.Catalog) string {
 }
 
 func scanRecord(c *metadata.Catalog, row interface{ Scan(...any) error }) (Record, error) {
-	raw := make([]any, len(c.Fields)+1)
+	return scanFields(c.Fields, row)
+}
+
+// scanFields читает строку из столбца идентификатора и столбцов полей.
+func scanFields(fields []metadata.Field, row interface{ Scan(...any) error }) (Record, error) {
+	raw := make([]any, len(fields)+1)
 	var id int64
 	raw[0] = &id
-	for i, f := range c.Fields {
+	for i, f := range fields {
 		switch f.Type {
 		case metadata.TypeBoolean:
 			raw[i+1] = new(int64)
@@ -468,8 +526,8 @@ func scanRecord(c *metadata.Catalog, row interface{ Scan(...any) error }) (Recor
 	if err := row.Scan(raw...); err != nil {
 		return Record{}, err
 	}
-	rec := Record{ID: id, Values: make(map[string]any, len(c.Fields))}
-	for i, f := range c.Fields {
+	rec := Record{ID: id, Values: make(map[string]any, len(fields))}
+	for i, f := range fields {
 		switch f.Type {
 		case metadata.TypeBoolean:
 			rec.Values[f.ID] = *raw[i+1].(*int64) == 1

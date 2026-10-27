@@ -30,6 +30,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runForm(args[1:], stdout, stderr)
 	}
 
+	if len(args) > 0 && args[0] == "document" {
+		return runDocument(args[1:], stdout, stderr)
+	}
+
 	if len(args) > 0 && args[0] == "db" {
 		return runDB(args[1:], stdout, stderr)
 	}
@@ -145,11 +149,23 @@ func runConfig(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return 1
 	}
-	fmt.Fprintf(stdout, "%s: ok, version %d, %d catalogs\n", args[1], m.Version, len(m.Catalogs))
+	fmt.Fprintf(stdout, "%s: ok, version %d, %d catalogs, %d documents\n", args[1], m.Version, len(m.Catalogs), len(m.Documents))
 	for _, c := range m.Catalogs {
 		fmt.Fprintf(stdout, "catalog %s %q: %d fields\n", c.ID, c.Name, len(c.Fields))
 		for _, f := range c.Fields {
 			fmt.Fprintf(stdout, "  %s %s %s\n", f.ID, f.Name, f.TypeString())
+		}
+	}
+	for _, d := range m.Documents {
+		fmt.Fprintf(stdout, "document %s %q: %d fields, %d tables\n", d.ID, d.Name, len(d.Fields), len(d.Tables))
+		for _, f := range d.Fields {
+			fmt.Fprintf(stdout, "  %s %s %s\n", f.ID, f.Name, f.TypeString())
+		}
+		for _, t := range d.Tables {
+			fmt.Fprintf(stdout, "  table %s %q: %d fields\n", t.ID, t.Name, len(t.Fields))
+			for _, f := range t.Fields {
+				fmt.Fprintf(stdout, "    %s %s %s\n", f.ID, f.Name, f.TypeString())
+			}
 		}
 	}
 	return 0

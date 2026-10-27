@@ -115,23 +115,31 @@ func findCatalog(m *metadata.Model, key string) (*metadata.Catalog, error) {
 }
 
 func findField(c *metadata.Catalog, key string) (metadata.Field, error) {
-	for _, f := range c.Fields {
+	return findFieldIn(fmt.Sprintf("catalog %q", c.Name), c.Fields, key)
+}
+
+func findFieldIn(owner string, fields []metadata.Field, key string) (metadata.Field, error) {
+	for _, f := range fields {
 		if f.ID == key || strings.EqualFold(f.Name, key) {
 			return f, nil
 		}
 	}
-	return metadata.Field{}, fmt.Errorf("catalog %q has no field %q", c.Name, key)
+	return metadata.Field{}, fmt.Errorf("%s has no field %q", owner, key)
 }
 
 // parseAssignments разбирает `поле=значение` по типам полей метаданных.
 func parseAssignments(c *metadata.Catalog, args []string) (map[string]any, error) {
+	return parseFieldAssignments(fmt.Sprintf("catalog %q", c.Name), c.Fields, args)
+}
+
+func parseFieldAssignments(owner string, fields []metadata.Field, args []string) (map[string]any, error) {
 	values := map[string]any{}
 	for _, a := range args {
 		key, text, ok := strings.Cut(a, "=")
 		if !ok {
 			return nil, fmt.Errorf("invalid assignment %q, want field=value", a)
 		}
-		f, err := findField(c, key)
+		f, err := findFieldIn(owner, fields, key)
 		if err != nil {
 			return nil, err
 		}
@@ -178,13 +186,17 @@ func parseValue(f metadata.Field, text string) (any, error) {
 
 // formatRecord печатает запись: `id: Поле=значение ...`; строки в кавычках.
 func formatRecord(c *metadata.Catalog, rec sqlite.Record) string {
+	return formatValues(rec.ID, c.Fields, rec.Values)
+}
+
+func formatValues(id int64, fields []metadata.Field, values map[string]any) string {
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "%d:", rec.ID)
-	for _, f := range c.Fields {
+	fmt.Fprintf(&sb, "%d:", id)
+	for _, f := range fields {
 		sb.WriteByte(' ')
 		sb.WriteString(f.Name)
 		sb.WriteByte('=')
-		switch v := rec.Values[f.ID].(type) {
+		switch v := values[f.ID].(type) {
 		case string:
 			sb.WriteString(strconv.Quote(v))
 		case nil:

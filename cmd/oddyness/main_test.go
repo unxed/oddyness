@@ -59,14 +59,28 @@ func TestConfigCheck(t *testing.T) {
 	if got := run([]string{"config", "check", dir}, &stdout, &stderr); got != 0 || stderr.String() != "" {
 		t.Fatalf("exit = %d, stderr = %q", got, stderr.String())
 	}
-	want := dir + ": ok, version 1, 1 catalogs\n" +
+	want := dir + ": ok, version 1, 1 catalogs, 2 documents\n" +
 		"catalog goods \"Товары\": 6 fields\n" +
 		"  goods-code Код string\n" +
 		"  goods-title Наименование string\n" +
 		"  goods-unit ЕдиницаИзмерения string\n" +
 		"  goods-active Используется boolean\n" +
 		"  goods-min МинимальныйОстаток number(15,3)\n" +
-		"  goods-analog Аналог ref(goods)\n"
+		"  goods-analog Аналог ref(goods)\n" +
+		"document receipt \"Поступление\": 3 fields, 1 tables\n" +
+		"  receipt-number Номер string\n" +
+		"  receipt-date Дата date\n" +
+		"  receipt-comment Комментарий string\n" +
+		"  table receipt-items \"Товары\": 2 fields\n" +
+		"    receipt-product Товар ref(goods)\n" +
+		"    receipt-qty Количество number(15,3)\n" +
+		"document issue \"Выдача\": 3 fields, 1 tables\n" +
+		"  issue-number Номер string\n" +
+		"  issue-date Дата date\n" +
+		"  issue-recipient Получатель string\n" +
+		"  table issue-items \"Товары\": 2 fields\n" +
+		"    issue-product Товар ref(goods)\n" +
+		"    issue-qty Количество number(15,3)\n"
 	if stdout.String() != want {
 		t.Errorf("stdout = %q, want %q", stdout.String(), want)
 	}
