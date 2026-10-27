@@ -130,7 +130,7 @@ func runNative(t *testing.T, display int, name string, script scenario, check fu
 		probe := exec.Command("xdotool", "search", "--onlyvisible", "--name", "^oddyness goods$")
 		probe.Env = append(os.Environ(), "DISPLAY="+disp)
 		if b, err := probe.Output(); err == nil {
-			window = strings.Fields(string(b + " "))[0]
+			window = strings.Fields(string(b) + " ")[0]
 		} else {
 			time.Sleep(100 * time.Millisecond)
 		}
