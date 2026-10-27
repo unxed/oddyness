@@ -108,7 +108,7 @@ func TestBSLRun(t *testing.T) {
 	bad := writeFile(t, "bad.bsl", "Функция Ф()\n\tВозврат Икс;\nКонецФункции\n")
 	var stdout, stderr bytes.Buffer
 	if got := run([]string{"bsl", "run", bad, "Ф"}, &stdout, &stderr); got != 1 || stdout.String() != "" ||
-		stderr.String() != bad+": compile error: 2:9: unknown name \"Икс\"\n" {
+		stderr.String() != bad+": compile error: 2:10: unknown name \"Икс\"\n" {
 		t.Errorf("compile error: exit=%d stdout=%q stderr=%q", got, stdout.String(), stderr.String())
 	}
 	for _, c := range []struct {
