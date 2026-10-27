@@ -98,7 +98,7 @@
 
 ### P09. Управление потоком и горячий цикл
 
-- Статус: in-progress, часть 2 из 2 (`Для Каждого`, таблица хоста `vm.Table`, `vm.Machine`, allocation-тест и benchmem; commit/PR и `ci` будут добавлены после прогона). Часть 1 из 2 (`Если`/`ИначеЕсли`/`Иначе`, `Пока`, `Прервать`, `Продолжить` в парсере и VM; PR https://github.com/unxed/oddyness/pull/7, коммит `98f48f4981239e9a5e323994cf98a1e37a6a038f`, `ci` успешен https://github.com/unxed/oddyness/actions/runs/40578179992; команда `go test ./internal/bsl ./internal/vm ./cmd/oddyness`). Зависимости: P08.
+- Статус: сделано. Часть 2: PR https://github.com/unxed/oddyness/pull/8, коммит `5f52f12b7276881a2565ba65d1bbfb057d86c7dc`, `ci` успешен https://github.com/unxed/oddyness/actions/runs/40579434556 (`Для Каждого`, таблица хоста `vm.Table`, `vm.Machine`, allocation-тест, benchmem в логе; команды `go test ./internal/bsl ./internal/vm ./cmd/oddyness`, `go test -run '^$' -bench . -benchmem ./internal/vm`). Часть 1 из 2 (`Если`/`ИначеЕсли`/`Иначе`, `Пока`, `Прервать`, `Продолжить` в парсере и VM; PR https://github.com/unxed/oddyness/pull/7, коммит `98f48f4981239e9a5e323994cf98a1e37a6a038f`, `ci` успешен https://github.com/unxed/oddyness/actions/runs/40578179992; команда `go test ./internal/bsl ./internal/vm ./cmd/oddyness`). Зависимости: P08.
 - Сделать: условие, минимальный цикл, доступ к строкам табличной части через
   ограниченный host API; заранее разрешённые имена и переиспользуемые слоты.
 - Проверить: пустая коллекция, несколько строк, вложенные вызовы, отмена;

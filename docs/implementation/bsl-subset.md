@@ -82,3 +82,8 @@
   не выделяет память (точный allocation-тест `TestHotLoopsZeroAllocs`, `go test -run '^$' -bench
   'SumQuantities|CountLoop' -benchmem ./internal/vm`). Обещание не распространяется на загрузку,
   компиляцию, строки (`+` над строками создаёт новую строку), `*`/`/`/`%` (через `math/big`) и SQL/GUI.
+- Измерение (прогон `ci` 40579434556, ubuntu-latest, 4 vCPU): `BenchmarkSumQuantities` (1000 строк,
+  сумма `Стр.Количество`) 86 µs/оп, 0 B/op, 0 allocs/op; `BenchmarkCountLoop` (1000 итераций `Пока`
+  с двумя сложениями) 151 µs/оп, 0 B/op, 0 allocs/op. Условия: подготовленные данные, один вызов
+  `Machine.Call` за итерацию, результат проверяется после цикла.
+
