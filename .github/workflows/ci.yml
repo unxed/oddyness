@@ -25,6 +25,14 @@ jobs:
         run: go test ./...
       - name: Benchmark exact numbers (informational output)
         run: go test -run '^$' -bench . -benchmem ./internal/value
+      - name: Probe decimal candidates (separate module, informational output)
+        working-directory: internal/value/probe
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          go vet ./...
+          go test -v -run TestCandidates ./... | grep -E 'RESULT|^(ok|FAIL|---)'
+          go test -run '^$' -bench . -benchmem ./...
       - name: Build without CGO for Linux, Windows, and macOS
         shell: bash
         run: |

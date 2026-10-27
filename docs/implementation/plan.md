@@ -38,7 +38,7 @@
 
 ### P03. Точные числа: контракт и измеряемая проба
 
-- Статус: in-progress, часть 1 из 2 (контракт и собственная реализация `Number` без зависимостей, `docs/implementation/numbers.md`; свидетельство: PR https://github.com/unxed/oddyness/pull/2, коммит `96bc194f2e5d7dc0c4cbcfb4503a26e673182ec2`, `ci` успешен https://github.com/unxed/oddyness/actions/runs/40572701686, команда `go test ./internal/value`). Часть 2: сравнение кандидатов apd/shopspring/govalues в отдельной пробе и выбор представления. Зависимости: P01.
+- Статус: сделано — часть 1: PR https://github.com/unxed/oddyness/pull/2 (merge `431be0e4e8de3cd12be8f14e8e879409ed3b1d8a`, `ci` https://github.com/unxed/oddyness/actions/runs/40572839043), контракт и `Number` без зависимостей; часть 2: PR https://github.com/unxed/oddyness/pull/3, проба кандидатов, `ci` https://github.com/unxed/oddyness/actions/runs/40573427176 (журнал и benchmem), выбор — собственный `Number`, таблица в `docs/implementation/numbers.md`. Команды: `go test ./internal/value`, `cd internal/value/probe && go test -v -run TestCandidates ./... && go test -run '^$' -bench . -benchmem ./...`. Не сделано намеренно: умножение/деление (правило промежуточной точности), NUM-04, сверка режимов округления с оригиналом. Зависимости: P01.
 - Сделать: `internal/value`, числовой контракт для первого профиля; сравнить
   пригодные decimal-кандидаты по точности, лицензии и аллокациям.
 - Проверить: NUM-01…04 из исследования, 0.1 + 0.2, отрицательный ноль,
