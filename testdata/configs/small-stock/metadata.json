@@ -5,12 +5,132 @@
       "id": "goods",
       "name": "Товары",
       "fields": [
-        {"id": "goods-code", "name": "Код", "type": "string", "unique": true},
-        {"id": "goods-title", "name": "Наименование", "type": "string"},
-        {"id": "goods-unit", "name": "ЕдиницаИзмерения", "type": "string"},
-        {"id": "goods-active", "name": "Используется", "type": "boolean"},
-        {"id": "goods-min", "name": "МинимальныйОстаток", "type": "number", "digits": 15, "scale": 3},
-        {"id": "goods-analog", "name": "Аналог", "type": "ref", "target": "goods"}
+        {
+          "id": "goods-code",
+          "name": "Код",
+          "type": "string",
+          "unique": true
+        },
+        {
+          "id": "goods-title",
+          "name": "Наименование",
+          "type": "string"
+        },
+        {
+          "id": "goods-unit",
+          "name": "ЕдиницаИзмерения",
+          "type": "string"
+        },
+        {
+          "id": "goods-active",
+          "name": "Используется",
+          "type": "boolean"
+        },
+        {
+          "id": "goods-min",
+          "name": "МинимальныйОстаток",
+          "type": "number",
+          "digits": 15,
+          "scale": 3
+        },
+        {
+          "id": "goods-analog",
+          "name": "Аналог",
+          "type": "ref",
+          "target": "goods"
+        }
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "id": "receipt",
+      "name": "Поступление",
+      "fields": [
+        {
+          "id": "receipt-number",
+          "name": "Номер",
+          "type": "string",
+          "unique": true
+        },
+        {
+          "id": "receipt-date",
+          "name": "Дата",
+          "type": "date"
+        },
+        {
+          "id": "receipt-comment",
+          "name": "Комментарий",
+          "type": "string"
+        }
+      ],
+      "tables": [
+        {
+          "id": "receipt-items",
+          "name": "Товары",
+          "fields": [
+            {
+              "id": "receipt-product",
+              "name": "Товар",
+              "type": "ref",
+              "target": "goods",
+              "required": true
+            },
+            {
+              "id": "receipt-qty",
+              "name": "Количество",
+              "type": "number",
+              "digits": 15,
+              "scale": 3,
+              "positive": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "issue",
+      "name": "Выдача",
+      "fields": [
+        {
+          "id": "issue-number",
+          "name": "Номер",
+          "type": "string",
+          "unique": true
+        },
+        {
+          "id": "issue-date",
+          "name": "Дата",
+          "type": "date"
+        },
+        {
+          "id": "issue-recipient",
+          "name": "Получатель",
+          "type": "string"
+        }
+      ],
+      "tables": [
+        {
+          "id": "issue-items",
+          "name": "Товары",
+          "fields": [
+            {
+              "id": "issue-product",
+              "name": "Товар",
+              "type": "ref",
+              "target": "goods",
+              "required": true
+            },
+            {
+              "id": "issue-qty",
+              "name": "Количество",
+              "type": "number",
+              "digits": 15,
+              "scale": 3,
+              "positive": true
+            }
+          ]
+        }
       ]
     }
   ]

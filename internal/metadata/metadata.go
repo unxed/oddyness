@@ -32,6 +32,7 @@ const (
 	TypeBoolean FieldType = "boolean"
 	TypeNumber  FieldType = "number" // требует digits (1..32) и scale (0..digits)
 	TypeRef     FieldType = "ref"    // требует target — id справочника
+	TypeDate    FieldType = "date"   // дата ГГГГ-ММ-ДД
 )
 
 // Field — поле справочника.
@@ -42,7 +43,11 @@ type Field struct {
 	Digits int       `json:"digits,omitempty"`
 	Scale  int       `json:"scale,omitempty"`
 	Target string    `json:"target,omitempty"`
-	Unique bool      `json:"unique,omitempty"` // только string: значение не повторяется в справочнике
+	Unique bool      `json:"unique,omitempty"` // только string: значение не повторяется в справочнике или виде документа
+	// Positive требует значение больше нуля (только number): количество.
+	Positive bool `json:"positive,omitempty"`
+	// Required делает ссылку обязательной (только ref); остальные типы обязательны всегда.
+	Required bool `json:"required,omitempty"`
 }
 
 // Catalog — справочник.
@@ -52,10 +57,26 @@ type Catalog struct {
 	Fields []Field `json:"fields"`
 }
 
+// TablePart — табличная часть документа: строки с одинаковым набором полей.
+type TablePart struct {
+	ID     string  `json:"id"`
+	Name   string  `json:"name"`
+	Fields []Field `json:"fields"`
+}
+
+// Document — вид документа: поля шапки и табличные части.
+type Document struct {
+	ID     string      `json:"id"`
+	Name   string      `json:"name"`
+	Fields []Field     `json:"fields"`
+	Tables []TablePart `json:"tables,omitempty"`
+}
+
 // Model — загруженная модель.
 type Model struct {
-	Version  int       `json:"version"`
-	Catalogs []Catalog `json:"catalogs"`
+	Version   int        `json:"version"`
+	Catalogs  []Catalog  `json:"catalogs"`
+	Documents []Document `json:"documents,omitempty"`
 }
 
 // Error — диагностика загрузки: файл, позиция (если известна), путь внутри
@@ -240,10 +261,10 @@ func (m *Model) validate(fail failFunc) error {
 			return fail(-1, cp+".fields", "catalog %q has no fields", c.Name)
 		}
 	}
-	for i, c := range m.Catalogs {
+	checkFields := func(path, owner string, fields []Field) error {
 		fieldNames := map[string]string{}
-		for j, f := range c.Fields {
-			fp := fmt.Sprintf("catalogs[%d].fields[%d]", i, j)
+		for j, f := range fields {
+			fp := fmt.Sprintf("%s.fields[%d]", path, j)
 			if err := checkID(fp, f.ID); err != nil {
 				return err
 			}
@@ -251,10 +272,56 @@ func (m *Model) validate(fail failFunc) error {
 				return fail(-1, fp+".name", "name is required")
 			}
 			if first, dup := fieldNames[strings.ToLower(f.Name)]; dup {
-				return fail(-1, fp+".name", "duplicate field name %q in catalog %q (first used at %s)", f.Name, c.Name, first)
+				return fail(-1, fp+".name", "duplicate field name %q in %s (first used at %s)", f.Name, owner, first)
 			}
 			fieldNames[strings.ToLower(f.Name)] = fp
 			if err := m.validateType(fp, f, catalogs, fail); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	for i, c := range m.Catalogs {
+		if err := checkFields(fmt.Sprintf("catalogs[%d]", i), fmt.Sprintf("catalog %q", c.Name), c.Fields); err != nil {
+			return err
+		}
+	}
+	docNames := map[string]string{}
+	for i, d := range m.Documents {
+		dp := fmt.Sprintf("documents[%d]", i)
+		if err := checkID(dp, d.ID); err != nil {
+			return err
+		}
+		if d.Name == "" {
+			return fail(-1, dp+".name", "name is required")
+		}
+		if first, dup := docNames[strings.ToLower(d.Name)]; dup {
+			return fail(-1, dp+".name", "duplicate document name %q (first used at %s)", d.Name, first)
+		}
+		docNames[strings.ToLower(d.Name)] = dp
+		if len(d.Fields) == 0 {
+			return fail(-1, dp+".fields", "document %q has no header fields", d.Name)
+		}
+		if err := checkFields(dp, fmt.Sprintf("document %q", d.Name), d.Fields); err != nil {
+			return err
+		}
+		tableNames := map[string]string{}
+		for k, tp := range d.Tables {
+			tpath := fmt.Sprintf("%s.tables[%d]", dp, k)
+			if err := checkID(tpath, tp.ID); err != nil {
+				return err
+			}
+			if tp.Name == "" {
+				return fail(-1, tpath+".name", "name is required")
+			}
+			if first, dup := tableNames[strings.ToLower(tp.Name)]; dup {
+				return fail(-1, tpath+".name", "duplicate table name %q in document %q (first used at %s)", tp.Name, d.Name, first)
+			}
+			tableNames[strings.ToLower(tp.Name)] = tpath
+			if len(tp.Fields) == 0 {
+				return fail(-1, tpath+".fields", "table %q has no fields", tp.Name)
+			}
+			if err := checkFields(tpath, fmt.Sprintf("table %q", tp.Name), tp.Fields); err != nil {
 				return err
 			}
 		}
@@ -264,9 +331,9 @@ func (m *Model) validate(fail failFunc) error {
 
 func (m *Model) validateType(fp string, f Field, catalogs map[string]bool, fail failFunc) error {
 	switch f.Type {
-	case TypeString, TypeBoolean, TypeNumber, TypeRef:
+	case TypeString, TypeBoolean, TypeNumber, TypeRef, TypeDate:
 	default:
-		return fail(-1, fp+".type", "unknown type %q (supported: string, boolean, number, ref)", f.Type)
+		return fail(-1, fp+".type", "unknown type %q (supported: string, boolean, number, ref, date)", f.Type)
 	}
 	if f.Type == TypeNumber {
 		if f.Digits < 1 || f.Digits > 32 {
@@ -277,6 +344,12 @@ func (m *Model) validateType(fp string, f Field, catalogs map[string]bool, fail 
 		}
 	} else if f.Digits != 0 || f.Scale != 0 {
 		return fail(-1, fp, "digits and scale are only valid for type number")
+	}
+	if f.Required && f.Type != TypeRef {
+		return fail(-1, fp+".required", "required is only supported for type ref (other types are always required)")
+	}
+	if f.Positive && f.Type != TypeNumber {
+		return fail(-1, fp+".positive", "positive is only supported for type number")
 	}
 	if f.Unique && f.Type != TypeString {
 		return fail(-1, fp+".unique", "unique is only supported for type string")

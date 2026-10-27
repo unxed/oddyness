@@ -208,3 +208,97 @@ func TestCrossProcess(t *testing.T) {
 		t.Errorf("final list: %d %q", code, out)
 	}
 }
+
+func seedProducts(t *testing.T, db string) {
+	t.Helper()
+	for _, a := range [][]string{
+		{"Код=A", "Наименование=Гайка", "ЕдиницаИзмерения=шт", "Используется=true", "МинимальныйОстаток=0"},
+		{"Код=B", "Наименование=Болт", "ЕдиницаИзмерения=шт", "Используется=true", "МинимальныйОстаток=0"},
+	} {
+		args := append([]string{"catalog", "add", configDir, db, "goods"}, a...)
+		if code, _, errs := cli(t, args...); code != 0 {
+			t.Fatalf("seed: %d %q", code, errs)
+		}
+	}
+}
+
+func TestDocumentCommands(t *testing.T) {
+	db := filepath.Join(t.TempDir(), "db.sqlite")
+	if code, _, errs := cli(t, "db", "create", configDir, db); code != 0 {
+		t.Fatalf("db create: %d %q", code, errs)
+	}
+	seedProducts(t, db)
+	add := []string{"document", "add", configDir, db, "Поступление", "Номер=R-1", "Дата=2026-10-27", "Комментарий=тест",
+		"--row", "Товары", "Товар=1", "Количество=10.500", "--row", "Товары", "Товар=2", "Количество=2.250"}
+	if code, out, errs := cli(t, add...); code != 0 || out != "id 1\n" || errs != "" {
+		t.Fatalf("add: %d %q %q", code, out, errs)
+	}
+	want := "1: Номер=\"R-1\" Дата=\"2026-10-27\" Комментарий=\"тест\"\n" +
+		"  Товары[1]: Товар=1 Количество=10.500\n" +
+		"  Товары[2]: Товар=2 Количество=2.250\n"
+	for _, args := range [][]string{
+		{"document", "get", configDir, db, "receipt", "1"},
+		{"document", "list", configDir, db, "поступление"},
+	} {
+		if code, out, errs := cli(t, args...); code != 0 || out != want || errs != "" {
+			t.Errorf("%v: %d %q %q", args, code, out, errs)
+		}
+	}
+	// другой вид документа: тот же номер допустим, строк нет
+	if code, out, _ := cli(t, "document", "add", configDir, db, "issue", "Номер=R-1", "Дата=2026-10-28", "Получатель=цех"); code != 0 || out != "id 1\n" {
+		t.Errorf("issue: %d %q", code, out)
+	}
+}
+
+func TestDocumentErrors(t *testing.T) {
+	db := filepath.Join(t.TempDir(), "db.sqlite")
+	if code, _, _ := cli(t, "db", "create", configDir, db); code != 0 {
+		t.Fatal("db create failed")
+	}
+	seedProducts(t, db)
+	head := []string{"document", "add", configDir, db, "receipt", "Номер=R-1", "Дата=2026-10-27", "Комментарий=x"}
+	row := func(product, qty string) []string {
+		return []string{"--row", "items", "Товар=" + product, "Количество=" + qty}
+	}
+	join := func(parts ...[]string) []string {
+		var out []string
+		for _, p := range parts {
+			out = append(out, p...)
+		}
+		return out
+	}
+	if code, _, errs := cli(t, join(head, row("1", "1"))...); code != 0 {
+		t.Fatalf("seed document: %d %q", code, errs)
+	}
+	cases := []struct {
+		name string
+		args []string
+		code int
+		msg  string
+	}{
+		{"duplicate number", join(head, row("1", "5")), 1, "duplicate value of a unique field"},
+		{"too precise second row", join([]string{"document", "add", configDir, db, "receipt", "Номер=R-2", "Дата=2026-10-27", "Комментарий=x"}, row("1", "1"), row("2", "0.0001")), 1, "fraction digits"},
+		{"zero quantity", join([]string{"document", "add", configDir, db, "receipt", "Номер=R-3", "Дата=2026-10-27", "Комментарий=x"}, row("1", "0")), 1, "greater than zero"},
+		{"missing product", join([]string{"document", "add", configDir, db, "receipt", "Номер=R-4", "Дата=2026-10-27", "Комментарий=x", "--row", "items", "Количество=1"}), 1, "required reference"},
+		{"missing product record", join([]string{"document", "add", configDir, db, "receipt", "Номер=R-5", "Дата=2026-10-27", "Комментарий=x"}, row("1", "1"), row("999", "1")), 1, "missing record"},
+		{"bad date", join([]string{"document", "add", configDir, db, "receipt", "Номер=R-6", "Дата=27.10.2026", "Комментарий=x"}), 1, "not a date"},
+		{"unknown table", join(head, []string{"--row", "nope", "Товар=1"}), 1, `has no table "nope"`},
+		{"row without table", join(head, []string{"--row"}), 1, "--row needs a table name"},
+		{"unknown document", []string{"document", "list", configDir, db, "нет"}, 1, `unknown document "нет"`},
+		{"unknown id", []string{"document", "get", configDir, db, "receipt", "99"}, 1, "record not found"},
+		{"usage", []string{"document"}, 2, "usage:"},
+		{"usage verb", []string{"document", "drop", configDir, db, "receipt"}, 2, "usage:"},
+		{"usage get arity", []string{"document", "get", configDir, db, "receipt"}, 2, "usage:"},
+	}
+	for _, c := range cases {
+		code, out, errs := cli(t, c.args...)
+		if code != c.code || out != "" || !strings.Contains(errs, c.msg) {
+			t.Errorf("%s: exit=%d stdout=%q stderr=%q; want exit %d containing %q", c.name, code, out, errs, c.code, c.msg)
+		}
+	}
+	// после всех отказов в базе один документ с одной строкой
+	_, out, _ := cli(t, "document", "list", configDir, db, "receipt")
+	if strings.Count(out, "\n") != 2 || !strings.HasPrefix(out, "1: Номер=\"R-1\"") {
+		t.Errorf("list after errors: %q", out)
+	}
+}

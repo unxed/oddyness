@@ -231,6 +231,9 @@ func (f *Form) parse(ctl Control, fld metadata.Field) (v any, msg string) {
 	text := f.texts[ctl.ID]
 	if fld.Type == metadata.TypeRef {
 		if strings.TrimSpace(text) == "" {
+			if fld.Required {
+				return nil, "required"
+			}
 			return nil, ""
 		}
 		id, err := strconv.ParseInt(strings.TrimSpace(text), 10, 64)

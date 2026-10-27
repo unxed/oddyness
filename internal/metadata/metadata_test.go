@@ -18,6 +18,13 @@ func TestLoadSmallStock(t *testing.T) {
 	if m.Version != 1 || len(m.Catalogs) != 1 {
 		t.Fatalf("model = %+v", m)
 	}
+	if len(m.Documents) != 2 || m.Documents[0].ID != "receipt" || m.Documents[1].ID != "issue" {
+		t.Errorf("documents = %+v", m.Documents)
+	}
+	if r := m.Documents[0]; len(r.Fields) != 3 || !r.Fields[0].Unique || r.Fields[1].Type != TypeDate || len(r.Tables) != 1 ||
+		!r.Tables[0].Fields[0].Required || !r.Tables[0].Fields[1].Positive {
+		t.Errorf("receipt = %+v", r)
+	}
 	c := m.Catalogs[0]
 	if !c.Fields[0].Unique || c.Fields[1].Unique {
 		t.Errorf("unique flags: %+v", c.Fields)
@@ -92,6 +99,8 @@ func TestDiagnostics(t *testing.T) {
 		{"target on string", cfg(`{"id":"f1","name":"Код","type":"string","target":"c1"}`), "catalogs[0].fields[0]", "only valid for type ref", 0, 0},
 		{"unique on number", cfg(`{"id":"f1","name":"Код","type":"number","digits":5,"scale":0,"unique":true}`), "catalogs[0].fields[0].unique", "only supported for type string", 0, 0},
 		{"unique on ref", cfg(`{"id":"f1","name":"Код","type":"ref","target":"c1","unique":true}`), "catalogs[0].fields[0].unique", "only supported for type string", 0, 0},
+		{"required on string", cfg(`{"id":"f1","name":"Код","type":"string","required":true}`), "catalogs[0].fields[0].required", "only supported for type ref", 0, 0},
+		{"positive on string", cfg(`{"id":"f1","name":"Код","type":"string","positive":true}`), "catalogs[0].fields[0].positive", "only supported for type number", 0, 0},
 		{"reference to a field id", cfg(okField + `,{"id":"f2","name":"Ссылка","type":"ref","target":"f1"}`), "catalogs[0].fields[1].target", "broken reference", 0, 0},
 	}
 	for _, c := range cases {
@@ -170,5 +179,68 @@ func TestStoreKeepsModelOnError(t *testing.T) {
 	}
 	if s.Current() == first || s.Current().Catalogs[0].ID != "x" {
 		t.Error("successful load did not replace the model")
+	}
+}
+
+func docCfg(docs string) string {
+	return `{"version":1,"catalogs":[{"id":"c1","name":"Товары","fields":[` + okField + `]}],"documents":[` + docs + `]}`
+}
+
+const (
+	numberField = `{"id":"d-num","name":"Номер","type":"string","unique":true}`
+	dateField   = `{"id":"d-date","name":"Дата","type":"date"}`
+	goodTable   = `{"id":"d-items","name":"Строки","fields":[{"id":"d-prod","name":"Товар","type":"ref","target":"c1","required":true},{"id":"d-qty","name":"Количество","type":"number","digits":15,"scale":3,"positive":true}]}`
+)
+
+func docWith(fields, tables string) string {
+	return `{"id":"d1","name":"Поступление","fields":[` + fields + `],"tables":[` + tables + `]}`
+}
+
+func TestDocumentsLoad(t *testing.T) {
+	m, err := Parse("m.json", []byte(docCfg(docWith(numberField+","+dateField, goodTable))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := m.Documents[0]
+	if d.ID != "d1" || len(d.Fields) != 2 || d.Fields[1].Type != TypeDate || len(d.Tables) != 1 {
+		t.Fatalf("document = %+v", d)
+	}
+	f := d.Tables[0].Fields
+	if !f[0].Required || !f[1].Positive || f[1].TypeString() != "number(15,3)" || d.Fields[1].TypeString() != "date" {
+		t.Errorf("table fields = %+v", f)
+	}
+	// документ без табличных частей допустим
+	if _, err := Parse("m.json", []byte(docCfg(`{"id":"d1","name":"Заметка","fields":[`+numberField+`]}`))); err != nil {
+		t.Errorf("document without tables: %v", err)
+	}
+	// конфигурация без документов по-прежнему допустима (P02)
+	if _, err := Parse("m.json", []byte(cfg(okField))); err != nil {
+		t.Errorf("no documents: %v", err)
+	}
+}
+
+func TestDocumentDiagnostics(t *testing.T) {
+	cases := []struct {
+		name, src, path, msg string
+	}{
+		{"no header fields", docCfg(docWith("", goodTable)), "documents[0].fields", "has no header fields"},
+		{"empty name", docCfg(`{"id":"d1","name":"","fields":[` + numberField + `]}`), "documents[0].name", "name is required"},
+		{"duplicate id with catalog", docCfg(`{"id":"c1","name":"Док","fields":[` + numberField + `]}`), "documents[0].id", `duplicate id "c1"`},
+		{"duplicate document name", docCfg(docWith(numberField, "") + `,{"id":"d2","name":"поступление","fields":[{"id":"x","name":"Н","type":"string"}]}`), "documents[1].name", "duplicate document name"},
+		{"duplicate header field name", docCfg(docWith(numberField+`,{"id":"d-n2","name":"номер","type":"string"}`, "")), "documents[0].fields[1].name", "duplicate field name"},
+		{"duplicate header id", docCfg(docWith(numberField+`,{"id":"d-num","name":"Другой","type":"string"}`, "")), "documents[0].fields[1].id", `duplicate id "d-num"`},
+		{"table without fields", docCfg(docWith(numberField, `{"id":"t1","name":"Строки","fields":[]}`)), "documents[0].tables[0].fields", "has no fields"},
+		{"table id equals field id", docCfg(docWith(numberField, `{"id":"d-num","name":"Строки","fields":[`+okField+`]}`)), "documents[0].tables[0].id", `duplicate id "d-num"`},
+		{"duplicate table name", docCfg(docWith(numberField, goodTable+`,{"id":"t2","name":"строки","fields":[{"id":"t2f","name":"Ф","type":"string"}]}`)), "documents[0].tables[1].name", "duplicate table name"},
+		{"broken reference in a table", docCfg(docWith(numberField, `{"id":"t1","name":"Строки","fields":[{"id":"t1p","name":"Товар","type":"ref","target":"nope"}]}`)), "documents[0].tables[0].fields[0].target", "broken reference"},
+		{"unknown type in a table", docCfg(docWith(numberField, `{"id":"t1","name":"Строки","fields":[{"id":"t1p","name":"Т","type":"money"}]}`)), "documents[0].tables[0].fields[0].type", "unknown type"},
+		{"unique on a date", docCfg(docWith(`{"id":"dd","name":"Дата","type":"date","unique":true}`, "")), "documents[0].fields[0].unique", "only supported for type string"},
+	}
+	for _, c := range cases {
+		_, err := Parse("m.json", []byte(c.src))
+		var e *Error
+		if !errors.As(err, &e) || e.Path != c.path || !strings.Contains(e.Msg, c.msg) {
+			t.Errorf("%s: got %v; want path %q containing %q", c.name, err, c.path, c.msg)
+		}
 	}
 }
