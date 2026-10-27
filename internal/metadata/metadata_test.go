@@ -66,7 +66,7 @@ func TestDiagnostics(t *testing.T) {
 		{"unknown top-level field", "{\n\"version\":1,\n\"extra\":true,\n\"catalogs\":[]}", "", `unknown field "extra"`, 3, 1},
 		{"unknown nested field", cfg(`{"id":"f1","name":"Код","type":"string","colour":"red"}`), "", `unknown field "colour"`, 1, 0},
 		{"wrong field type", cfg(`{"id":5,"name":"Код","type":"string"}`), "catalogs.fields.id", "wrong type", 1, 0},
-		{"trailing data", cfg(okField) + "\n{}", "", "unexpected data after the top-level object", 2, 0},
+		{"trailing data", cfg(okField) + "\n{}", "", "after top-level value", 2, 1},
 		{"no catalogs", `{"version":1,"catalogs":[]}`, "catalogs", "at least one catalog", 0, 0},
 		{"no fields", `{"version":1,"catalogs":[{"id":"c1","name":"Т","fields":[]}]}`, "catalogs[0].fields", "has no fields", 0, 0},
 		{"duplicate catalog id", `{"version":1,"catalogs":[{"id":"c1","name":"А","fields":[` + okField + `]},{"id":"c1","name":"Б","fields":[{"id":"f2","name":"К","type":"string"}]}]}`, "catalogs[1].id", `duplicate id "c1" (first used at catalogs[0])`, 0, 0},

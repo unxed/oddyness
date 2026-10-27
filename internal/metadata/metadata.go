@@ -115,9 +115,6 @@ func Parse(name string, data []byte) (*Model, error) {
 	if err := dec.Decode(&m); err != nil {
 		return nil, decodeError(data, err, fail)
 	}
-	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
-		return nil, fail(int(dec.InputOffset()), "", "unexpected data after the top-level object")
-	}
 	if err := m.validate(fail); err != nil {
 		return nil, err
 	}
