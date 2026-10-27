@@ -193,7 +193,8 @@ func (s *Store) createSchema(fp string) error {
 	}
 	for _, d := range s.model.Documents {
 		cols, tail, indexes := columnDefs("doc_"+d.ID, docTable(d.ID), d.Fields)
-		stmts = append(stmts, fmt.Sprintf(`CREATE TABLE %s (%s)`, docTable(d.ID), strings.Join(append([]string{`"id" INTEGER PRIMARY KEY`}, append(cols, tail...)...), ", ")))
+		docHead := []string{`"id" INTEGER PRIMARY KEY`, `"posted" INTEGER NOT NULL DEFAULT 0 CHECK ("posted" IN (0, 1))`}
+		stmts = append(stmts, fmt.Sprintf(`CREATE TABLE %s (%s)`, docTable(d.ID), strings.Join(append(docHead, append(cols, tail...)...), ", ")))
 		stmts = append(stmts, indexes...)
 		for _, t := range d.Tables {
 			name := partTable(d.ID, t.ID)

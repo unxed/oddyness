@@ -8,18 +8,20 @@ import (
 	"strings"
 
 	"github.com/unxed/oddyness/internal/metadata"
+	"github.com/unxed/oddyness/internal/platform"
 	"github.com/unxed/oddyness/internal/storage/sqlite"
 )
 
 const documentUsage = `usage:
   oddyness document add <config-dir> <db-file> <document> [<field>=<value>...] [--row <table> <field>=<value>...]...
   oddyness document get <config-dir> <db-file> <document> <id>
-  oddyness document list <config-dir> <db-file> <document>`
+  oddyness document list <config-dir> <db-file> <document>
+  oddyness document post <config-dir> <db-file> <document> <id>`
 
 // runDocument выполняет команды работы с документами. `add` записывает шапку и
 // строки атомарно: любая ошибка оставляет базу без изменений.
 func runDocument(args []string, stdout, stderr io.Writer) int {
-	need := map[string]int{"add": 4, "get": 5, "list": 4}
+	need := map[string]int{"add": 4, "get": 5, "list": 4, "post": 5}
 	if len(args) == 0 || need[args[0]] == 0 || len(args) < need[args[0]] || (args[0] != "add" && len(args) != need[args[0]]) {
 		fmt.Fprintln(stderr, documentUsage)
 		return 2
@@ -64,6 +66,19 @@ func runDocument(args []string, stdout, stderr io.Writer) int {
 			return fail(err)
 		}
 		fmt.Fprint(stdout, formatDocument(d, doc))
+	case "post":
+		id, err := strconv.ParseInt(args[4], 10, 64)
+		if err != nil {
+			return fail(fmt.Errorf("invalid id %q", args[4]))
+		}
+		pl, err := platform.Open(s, args[1], platform.Options{})
+		if err != nil {
+			return fail(err)
+		}
+		if err := pl.Post(ctx, d.ID, id); err != nil {
+			return fail(err)
+		}
+		fmt.Fprintf(stdout, "posted %d\n", id)
 	case "list":
 		docs, err := s.ListDocuments(ctx, d.ID)
 		if err != nil {
@@ -132,6 +147,9 @@ func parseDocument(d *metadata.Document, args []string) (map[string]any, map[str
 func formatDocument(d *metadata.Document, doc sqlite.Document) string {
 	var sb strings.Builder
 	sb.WriteString(formatValues(doc.ID, d.Fields, doc.Header))
+	if doc.Posted {
+		sb.WriteString(" [posted]")
+	}
 	sb.WriteByte('\n')
 	for _, t := range d.Tables {
 		for _, row := range doc.Tables[t.ID] {

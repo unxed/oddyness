@@ -86,7 +86,11 @@
             }
           ]
         }
-      ]
+      ],
+      "posting": {
+        "file": "bsl/receipt-posting.bsl",
+        "procedure": "ПриПроведении"
+      }
     },
     {
       "id": "issue",

@@ -14,6 +14,7 @@ import (
 // (Record.ID у строк) считается с единицы по порядку записи; Values индексированы по id поля.
 type Document struct {
 	ID     int64
+	Posted bool // документ проведён: его движения записаны в регистры
 	Header map[string]any
 	Tables map[string][]Record
 }
@@ -178,10 +179,10 @@ func selectFields(table, idColumn string, fields []metadata.Field) string {
 	return fmt.Sprintf(`SELECT %s FROM %s`, strings.Join(cols, ", "), table)
 }
 
-func (s *Store) loadLines(ctx context.Context, d *metadata.Document, id int64) (map[string][]Record, error) {
+func loadLines(ctx context.Context, q querier, d *metadata.Document, id int64) (map[string][]Record, error) {
 	out := map[string][]Record{}
 	for _, t := range d.Tables {
-		rows, err := s.db.QueryContext(ctx, selectFields(partTable(d.ID, t.ID), `"line"`, t.Fields)+` WHERE "owner" = ? ORDER BY "line"`, id)
+		rows, err := q.QueryContext(ctx, selectFields(partTable(d.ID, t.ID), `"line"`, t.Fields)+` WHERE "owner" = ? ORDER BY "line"`, id)
 		if err != nil {
 			return nil, err
 		}
@@ -204,22 +205,54 @@ func (s *Store) loadLines(ctx context.Context, d *metadata.Document, id int64) (
 
 // GetDocument возвращает документ или ErrNotFound.
 func (s *Store) GetDocument(ctx context.Context, docID string, id int64) (Document, error) {
+	return getDocument(ctx, s.db, s, docID, id)
+}
+
+// GetDocument возвращает документ внутри транзакции.
+func (t *Tx) GetDocument(docID string, id int64) (Document, error) {
+	return getDocument(t.ctx, t.tx, t.s, docID, id)
+}
+
+func getDocument(ctx context.Context, q querier, s *Store, docID string, id int64) (Document, error) {
 	d, err := s.document(docID)
 	if err != nil {
 		return Document{}, err
 	}
-	rec, err := scanFields(d.Fields, s.db.QueryRowContext(ctx, selectFields(docTable(d.ID), `"id"`, d.Fields)+` WHERE "id" = ?`, id))
+	var posted int
+	err = q.QueryRowContext(ctx, fmt.Sprintf(`SELECT "posted" FROM %s WHERE "id" = ?`, docTable(d.ID)), id).Scan(&posted)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Document{}, fmt.Errorf("%w: %s %d", ErrNotFound, docID, id)
 	}
 	if err != nil {
 		return Document{}, err
 	}
-	lines, err := s.loadLines(ctx, d, id)
+	rec, err := scanFields(d.Fields, q.QueryRowContext(ctx, selectFields(docTable(d.ID), `"id"`, d.Fields)+` WHERE "id" = ?`, id))
 	if err != nil {
 		return Document{}, err
 	}
-	return Document{ID: rec.ID, Header: rec.Values, Tables: lines}, nil
+	lines, err := loadLines(ctx, q, d, id)
+	if err != nil {
+		return Document{}, err
+	}
+	return Document{ID: rec.ID, Posted: posted == 1, Header: rec.Values, Tables: lines}, nil
+}
+
+// SetPosted ставит или снимает признак проведения документа; сами движения пишет
+// ReplaceMovements в той же транзакции.
+func (t *Tx) SetPosted(docID string, id int64, posted bool) error {
+	d, err := t.s.document(docID)
+	if err != nil {
+		return err
+	}
+	v := 0
+	if posted {
+		v = 1
+	}
+	res, err := t.tx.ExecContext(t.ctx, fmt.Sprintf(`UPDATE %s SET "posted" = ? WHERE "id" = ?`, docTable(d.ID)), v, id)
+	if err != nil {
+		return mapErr(err)
+	}
+	return affected(res, docID, id)
 }
 
 // ListDocuments возвращает все документы вида по возрастанию идентификатора.
@@ -248,11 +281,11 @@ func (s *Store) ListDocuments(ctx context.Context, docID string) ([]Document, er
 	}
 	out := make([]Document, 0, len(heads))
 	for _, h := range heads {
-		lines, err := s.loadLines(ctx, d, h.ID)
+		doc, err := getDocument(ctx, s.db, s, docID, h.ID)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, Document{ID: h.ID, Header: h.Values, Tables: lines})
+		out = append(out, doc)
 	}
 	return out, nil
 }

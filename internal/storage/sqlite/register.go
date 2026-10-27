@@ -35,6 +35,9 @@ func (s *Store) register(id string) (*metadata.Register, error) {
 	return nil, fmt.Errorf("%w: register %q", ErrUnknown, id)
 }
 
+// Model возвращает модель, по которой создана база.
+func (s *Store) Model() *metadata.Model { return s.model }
+
 // Tx — открытая транзакция хранилища; живёт только внутри Store.Tx.
 type Tx struct {
 	s   *Store
@@ -97,8 +100,10 @@ func (s *Store) ReplaceMovements(ctx context.Context, registerID, recorderDoc st
 	return s.Tx(ctx, func(t *Tx) error { return t.ReplaceMovements(registerID, recorderDoc, recorderID, rows) })
 }
 
+// querier — общее у *sql.DB и *sql.Tx: чтение вне транзакции и внутри неё.
 type querier interface {
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
 // Movements возвращает движения регистратора по номеру строки.

@@ -36,6 +36,7 @@ const (
 	opCall     // a — индекс подпрограммы
 	opField    // a — константа с именем колонки (в нижнем регистре)
 	opIterNext // a — адрес выхода, b — слот коллекции (b+1 — позиция), c — слот переменной
+	opHost     // a — индекс встроенной функции хоста, b — число аргументов
 	opRet      // результат — вершина стека
 	opRetUndef
 )
@@ -55,10 +56,21 @@ type function struct {
 	consts     []Value
 }
 
+// HostDecl объявляет встроенную функцию хоста, доступную BSL по имени (регистр не
+// важен): число аргументов от MinArgs до MaxArgs (MaxArgs < 0 — без верхнего предела).
+// Реализацию хост передаёт при вызове в Options.Host.
+type HostDecl struct {
+	Name    string
+	MinArgs int
+	MaxArgs int
+}
+
 // Program — скомпилированный модуль.
 type Program struct {
-	funcs []*function
-	index map[string]int
+	funcs     []*function
+	index     map[string]int
+	host      []HostDecl
+	hostIndex map[string]int
 }
 
 func fail(pos bsl.Pos, format string, args ...any) *Error {
@@ -67,11 +79,18 @@ func fail(pos bsl.Pos, format string, args ...any) *Error {
 
 // Compile компилирует модуль. Переменные уровня модуля пока не поддержаны и
 // дают ошибку компиляции.
-func Compile(m *bsl.Module) (*Program, error) {
+func Compile(m *bsl.Module) (*Program, error) { return CompileWith(m, nil) }
+
+// CompileWith компилирует модуль с объявленными функциями хоста. Подпрограмма
+// модуля с тем же именем скрывает функцию хоста.
+func CompileWith(m *bsl.Module, host []HostDecl) (*Program, error) {
 	if len(m.Vars) > 0 {
 		return nil, fail(m.Vars[0].Position(), "module-level variables are not supported yet")
 	}
-	p := &Program{index: map[string]int{}}
+	p := &Program{index: map[string]int{}, host: host, hostIndex: map[string]int{}}
+	for i, h := range host {
+		p.hostIndex[strings.ToLower(h.Name)] = i
+	}
 	routines := map[string]*bsl.Routine{}
 	for _, r := range m.Routines {
 		key := strings.ToLower(r.Name)
@@ -262,6 +281,19 @@ func (c *compiler) fail(pos bsl.Pos, format string, args ...any) {
 func (c *compiler) call(e *bsl.Call, needValue bool) {
 	idx, ok := c.prog.index[strings.ToLower(e.Name)]
 	if !ok {
+		if h, isHost := c.prog.hostIndex[strings.ToLower(e.Name)]; isHost {
+			d := c.prog.host[h]
+			if len(e.Args) < d.MinArgs || (d.MaxArgs >= 0 && len(e.Args) > d.MaxArgs) {
+				c.fail(e.Position(), "%q takes %d..%d arguments, got %d", e.Name, d.MinArgs, d.MaxArgs, len(e.Args))
+				return
+			}
+			for _, a := range e.Args {
+				c.expr(a)
+			}
+			at := c.emit(opHost, h, e.Position())
+			c.fn.code[at].b = len(e.Args)
+			return
+		}
 		c.fail(e.Position(), "unknown routine %q", e.Name)
 		return
 	}
