@@ -39,6 +39,8 @@ jobs:
           go vet ./...
           go test -v -run TestCandidates ./... | grep -E 'RESULT|^(ok|FAIL|---)'
           go test -run '^$' -bench . -benchmem ./...
+      - name: List linked modules of the storage package (informational output)
+        run: go list -deps -f '{{with .Module}}MODULE {{.Path}} {{.Version}}{{end}}' ./internal/storage/... | sort -u
       - name: Build storage without CGO for Linux, Windows, and macOS
         shell: bash
         run: |
