@@ -49,7 +49,7 @@
 
 ### P04. Первая нативная форма и параллельный UI harness
 
-- Статус: in-progress, часть 1 из 2 (headless-модель формы `internal/forms`: контролы со стабильными id, обязательные поля, типы и точность, фокус, закрытие, снимок раскладки, два независимых параллельных сценария; `docs/implementation/forms.md`; PR https://github.com/unxed/oddyness/pull/12, код проверен `ci` https://github.com/unxed/oddyness/actions/runs/40583495321 на коммите `e5435822fd88a6c5dccf6bc5e9d794e092eb0e77`; команда `go test ./internal/forms`). Часть 2: окно goWidgets (в Context7 библиотеки нет, API читается из `api.go`), реальное прокликивание одного backend и параллельный harness. Зависимости: P02.
+- Статус: in-progress, часть 2а из 3 (окно goWidgets `internal/ui` поверх формы, headless-прогон; PR https://github.com/unxed/oddyness/pull/13, `ci` https://github.com/unxed/oddyness/actions/runs/40584603362 на коммите `6bf525bb57c212f1b5fa7a3f2bec96e6ad4511e5`; `go test ./internal/ui`). Часть 1 завершена: PR https://github.com/unxed/oddyness/pull/12 (`internal/forms`, `docs/implementation/forms.md`). Осталось (часть 2б): команда запуска окна, реальное прокликивание на одном нативном backend (Xvfb, GTK) и два параллельных процесса-сценария с отдельными БД и дисплеями. Зависимости: P02.
 - Сделать: окно goWidgets с полями справочника и локальной валидацией формы;
   headless-модель, стабильные ID контролов, два изолированных сценария ввода.
 - Проверить: заполнение, обязательное поле, фокус, закрытие; два сценария
