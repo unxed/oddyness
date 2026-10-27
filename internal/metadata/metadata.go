@@ -42,6 +42,7 @@ type Field struct {
 	Digits int       `json:"digits,omitempty"`
 	Scale  int       `json:"scale,omitempty"`
 	Target string    `json:"target,omitempty"`
+	Unique bool      `json:"unique,omitempty"` // только string: значение не повторяется в справочнике
 }
 
 // Catalog — справочник.
@@ -276,6 +277,9 @@ func (m *Model) validateType(fp string, f Field, catalogs map[string]bool, fail 
 		}
 	} else if f.Digits != 0 || f.Scale != 0 {
 		return fail(-1, fp, "digits and scale are only valid for type number")
+	}
+	if f.Unique && f.Type != TypeString {
+		return fail(-1, fp+".unique", "unique is only supported for type string")
 	}
 	if f.Type == TypeRef {
 		if f.Target == "" {
