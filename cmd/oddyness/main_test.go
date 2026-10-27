@@ -70,12 +70,12 @@ func TestBSLCheckOK(t *testing.T) {
 }
 
 func TestBSLCheckDiagnostics(t *testing.T) {
-	path := writeFile(t, "bad.bsl", "Процедура П()\n  Если Истина Тогда\nКонецПроцедуры\n")
+	path := writeFile(t, "bad.bsl", "Процедура П()\n  Для Каждого Х Из Х Цикл\nКонецПроцедуры\n")
 	var stdout, stderr bytes.Buffer
 	if got := run([]string{"bsl", "check", path}, &stdout, &stderr); got != 1 {
 		t.Fatalf("exit = %d, want 1", got)
 	}
-	want := path + `:2:3: "Если" statement is not supported` + "\n"
+	want := path + `:2:3: "Для" statement is not supported` + "\n"
 	if stderr.String() != want || stdout.String() != "" {
 		t.Errorf("stderr = %q, stdout = %q, want stderr %q", stderr.String(), stdout.String(), want)
 	}

@@ -205,8 +205,18 @@ func TestDiagnostics(t *testing.T) {
 		msg         string
 		unsupported bool
 	}{
-		{"unsupported if", "Процедура П()\n  Если Истина Тогда\nКонецПроцедуры", 2, 3, `"Если" statement is not supported`, true},
-		{"unsupported while en", "Procedure P()\nWhile True Do\nEndProcedure", 2, 1, `"While" statement`, true},
+		{"unsupported for", "Процедура П()\n  Для Каждого Х Из Х Цикл\nКонецПроцедуры", 2, 3, `"Для" statement is not supported`, true},
+		{"unsupported for en", "Procedure P()\nFor Each X In Y Do\nEndProcedure", 2, 1, `"For" statement`, true},
+		{"if without then", "Процедура П()\nЕсли Истина\nКонецЕсли;\nКонецПроцедуры", 3, 1, `expected "Тогда"`, false},
+		{"unclosed if", "Процедура П()\nЕсли Истина Тогда\nКонецПроцедуры", 3, 1, "If: expected closing keyword", false},
+		{"unclosed if at eof", "Процедура П()\nЕсли Истина Тогда\n", 3, 1, "If is not closed", false},
+		{"while without do", "Процедура П()\nПока Истина\nКонецЦикла;\nКонецПроцедуры", 3, 1, `expected "Цикл"`, false},
+		{"unclosed while", "Процедура П()\nПока Истина Цикл\nКонецЕсли;\nКонецПроцедуры", 3, 1, "While: expected closing keyword", false},
+		{"break outside loop", "Процедура П()\nПрервать;\nКонецПроцедуры", 2, 1, "outside a loop", false},
+		{"continue in if outside loop", "Процедура П()\nЕсли Истина Тогда\nПродолжить;\nКонецЕсли;\nКонецПроцедуры", 3, 1, "outside a loop", false},
+		{"stray endif", "Процедура П()\nКонецЕсли;\nКонецПроцедуры", 2, 1, "does not close procedure", false},
+		{"var in block", "Процедура П()\nЕсли Истина Тогда\nПерем А;\nКонецЕсли;\nКонецПроцедуры", 3, 1, "must precede statements", false},
+		{"return value in procedure branch", "Процедура П()\nЕсли Истина Тогда\nВозврат 1;\nКонецЕсли;\nКонецПроцедуры", 3, 1, "cannot return a value", false},
 		{"unsupported try", "Процедура П()\nПопытка\nКонецПроцедуры", 2, 1, `"Попытка" statement`, true},
 		{"directive", "&НаСервере\nПроцедура П()\nКонецПроцедуры", 1, 1, "compilation directive &НаСервере is not supported", true},
 		{"directive in body", "Процедура П()\n&НаКлиенте\nКонецПроцедуры", 2, 1, "compilation directive &НаКлиенте", true},
@@ -257,7 +267,7 @@ func TestDiagnostics(t *testing.T) {
 // Ошибка выбирается по порядку текста: более ранняя ошибка разбора важнее
 // более поздней ошибки лексера.
 func TestFirstErrorWins(t *testing.T) {
-	e := parseErr(t, "Процедура П()\nЕсли\nА = 1 @ 2;\nКонецПроцедуры")
+	e := parseErr(t, "Процедура П()\nДля\nА = 1 @ 2;\nКонецПроцедуры")
 	if e.Pos.Line != 2 || !e.Unsupported {
 		t.Errorf("got %d:%d %q", e.Pos.Line, e.Pos.Col, e.Msg)
 	}
@@ -285,4 +295,46 @@ func TestNodePositions(t *testing.T) {
 	if bin.Position() != (Pos{2, 11}) || bin.X.(*Call).Position() != (Pos{2, 6}) {
 		t.Errorf("binary at %v, call at %v", bin.Position(), bin.X.(*Call).Position())
 	}
+}
+
+func TestControlFlowParse(t *testing.T) {
+	m := mustParse(t, `Функция Ф(Знач Х)
+	Пока Х > 0 Цикл
+		Если Х = 5 Тогда
+			Прервать;
+		ИначеЕсли Х = 3 Тогда
+			Продолжить;
+		ИначеЕсли Х = 2 Тогда
+		Иначе
+			Х = Х - 1;
+		КонецЕсли;
+	КонецЦикла;
+	Возврат Х;
+КонецФункции
+`)
+	body := m.Routines[0].Body
+	if len(body) != 2 {
+		t.Fatalf("body = %d statements", len(body))
+	}
+	w := body[0].(*While)
+	if exprString(w.Cond) != "(Х > 0)" || len(w.Body) != 1 {
+		t.Fatalf("while: %s, %d", exprString(w.Cond), len(w.Body))
+	}
+	st := w.Body[0].(*If)
+	if len(st.Elifs) != 2 || len(st.Then) != 1 || len(st.Else) != 1 || len(st.Elifs[1].Body) != 0 {
+		t.Errorf("if shape: %d elifs, then=%d, else=%d", len(st.Elifs), len(st.Then), len(st.Else))
+	}
+	if _, ok := st.Then[0].(*Break); !ok {
+		t.Errorf("then[0] is %T", st.Then[0])
+	}
+	if _, ok := st.Elifs[0].Body[0].(*Continue); !ok {
+		t.Errorf("elif[0] body is %T", st.Elifs[0].Body[0])
+	}
+	if st.Position() != (Pos{3, 3}) || w.Position() != (Pos{2, 2}) {
+		t.Errorf("positions: if %v, while %v", st.Position(), w.Position())
+	}
+	// английские слова, регистр не важен, оператор после КонецЕсли без точки с запятой
+	mustParse(t, "Function F(Val X)\nWHILE X > 0 DO\nIF X = 1 THEN Break; ELSIF X = 2 THEN Continue; ELSE X = 0; ENDIF\nENDDO\nReturn X;\nEndFunction")
+	// Прервать внутри Если внутри цикла допустимо
+	mustParse(t, "Процедура П()\nПока Истина Цикл\nЕсли Истина Тогда\nПрервать;\nКонецЕсли;\nКонецЦикла;\nКонецПроцедуры")
 }

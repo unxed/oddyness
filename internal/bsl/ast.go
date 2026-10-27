@@ -65,6 +65,36 @@ type (
 	}
 )
 
+type (
+	// If — Если/ИначеЕсли/Иначе/КонецЕсли.
+	If struct {
+		Pos
+		Cond  Expr
+		Then  []Stmt
+		Elifs []ElseIf
+		Else  []Stmt // nil, если ветки Иначе нет
+	}
+	// ElseIf — ветка ИначеЕсли.
+	ElseIf struct {
+		Pos
+		Cond Expr
+		Body []Stmt
+	}
+	// While — Пока … Цикл … КонецЦикла.
+	While struct {
+		Pos
+		Cond Expr
+		Body []Stmt
+	}
+	// Break — Прервать; Continue — Продолжить (только внутри цикла).
+	Break    struct{ Pos }
+	Continue struct{ Pos }
+)
+
+func (*If) stmt()       {}
+func (*While) stmt()    {}
+func (*Break) stmt()    {}
+func (*Continue) stmt() {}
 func (*Assign) stmt()   {}
 func (*CallStmt) stmt() {}
 func (*Return) stmt()   {}
