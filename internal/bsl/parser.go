@@ -23,19 +23,19 @@ var keywords = map[string]string{
 	"и":    "and", "and": "and",
 	"или": "or", "or": "or",
 	"не": "not", "not": "not",
+	"если": "if", "if": "if", "иначеесли": "elsif", "elsif": "elsif",
+	"иначе": "else", "else": "else", "конецесли": "endif", "endif": "endif",
+	"тогда": "then", "then": "then",
+	"пока": "while", "while": "while",
+	"цикл": "do", "do": "do", "конеццикла": "enddo", "enddo": "enddo",
+	"прервать": "break", "break": "break", "продолжить": "continue", "continue": "continue",
 }
 
 // Зарезервированные слова языка 1С, которых в подмножестве нет: встретив их,
 // парсер отвечает явной ошибкой «не поддерживается», а не «неожиданный токен».
 var unsupportedWords = map[string]string{
-	"если": "if", "if": "if", "иначеесли": "elsif", "elsif": "elsif",
-	"иначе": "else", "else": "else", "конецесли": "endif", "endif": "endif",
-	"тогда": "then", "then": "then",
-	"пока": "while", "while": "while",
 	"для": "for", "for": "for", "каждого": "each", "each": "each",
 	"из": "in", "in": "in", "по": "to", "to": "to",
-	"цикл": "do", "do": "do", "конеццикла": "enddo", "enddo": "enddo",
-	"прервать": "break", "break": "break", "продолжить": "continue", "continue": "continue",
 	"попытка": "try", "try": "try", "исключение": "except", "except": "except",
 	"конецпопытки": "endtry", "endtry": "endtry",
 	"вызватьисключение": "raise", "raise": "raise",
@@ -247,30 +247,95 @@ func (p *parser) routine() *Routine {
 	for kw(p.tok) == "var" {
 		r.Locals = append(r.Locals, p.varDecl(false))
 	}
+	r.Body = p.block(r, false, fmt.Sprintf("%s %q", routineWord(r), r.Name))
+	if k := kw(p.tok); k != end {
+		p.fail(p.tok.pos, "%q does not close %s %q", p.tok.text, routineWord(r), r.Name)
+	}
+	p.step()
+	return r
+}
+
+func isTerminator(k string) bool {
+	switch k {
+	case "endprocedure", "endfunction", "else", "elsif", "endif", "enddo":
+		return true
+	}
+	return false
+}
+
+// block читает операторы до слова-ограничителя (КонецПроцедуры, Иначе, КонецЕсли,
+// КонецЦикла и т. п.), которое оставляет текущим токеном; what — для сообщения
+// о незакрытой конструкции. loop разрешает Прервать и Продолжить.
+func (p *parser) block(r *Routine, loop bool, what string) []Stmt {
+	var body []Stmt
 	for {
 		p.rejectDirective()
 		k := kw(p.tok)
 		switch {
-		case k == end:
-			p.step()
-			return r
-		case k == "endprocedure" || k == "endfunction":
-			p.fail(p.tok.pos, "%q does not close %s %q", p.tok.text, routineWord(r), r.Name)
+		case isTerminator(k):
+			return body
 		case p.tok.kind == kEOF:
-			p.fail(p.tok.pos, "unexpected end of file: %s %q is not closed", routineWord(r), r.Name)
+			p.fail(p.tok.pos, "unexpected end of file: %s is not closed", what)
 		case p.isOp(";"):
 			p.step()
 			continue
 		case k == "var":
 			p.fail(p.tok.pos, "variable declarations must precede statements")
 		}
-		r.Body = append(r.Body, p.statement(r))
+		body = append(body, p.statement(r, loop))
 		if p.isOp(";") {
 			p.step()
-		} else if k := kw(p.tok); k != "endprocedure" && k != "endfunction" {
+		} else if !isTerminator(kw(p.tok)) {
 			p.fail(p.tok.pos, "expected \";\", found %s", p.tok.describe())
 		}
 	}
+}
+
+// closeWith требует текущим токеном слово want и проходит его.
+func (p *parser) closeWith(want, what string) {
+	if kw(p.tok) != want {
+		if p.tok.kind == kEOF {
+			p.fail(p.tok.pos, "unexpected end of file: %s is not closed", what)
+		}
+		p.fail(p.tok.pos, "%s: expected closing keyword, found %s", what, p.tok.describe())
+	}
+	p.step()
+}
+
+func (p *parser) expectThen(then string) {
+	if kw(p.tok) != then {
+		p.fail(p.tok.pos, "expected %q, found %s", map[string]string{"then": "Тогда", "do": "Цикл"}[then], p.tok.describe())
+	}
+	p.step()
+}
+
+func (p *parser) ifStmt(r *Routine, loop bool) Stmt {
+	st := &If{Pos: p.take().pos}
+	st.Cond = p.expr()
+	p.expectThen("then")
+	st.Then = p.block(r, loop, "If")
+	for kw(p.tok) == "elsif" {
+		e := ElseIf{Pos: p.take().pos}
+		e.Cond = p.expr()
+		p.expectThen("then")
+		e.Body = p.block(r, loop, "If")
+		st.Elifs = append(st.Elifs, e)
+	}
+	if kw(p.tok) == "else" {
+		p.step()
+		st.Else = p.block(r, loop, "If")
+	}
+	p.closeWith("endif", "If")
+	return st
+}
+
+func (p *parser) whileStmt(r *Routine) Stmt {
+	st := &While{Pos: p.take().pos}
+	st.Cond = p.expr()
+	p.expectThen("do")
+	st.Body = p.block(r, true, "While")
+	p.closeWith("enddo", "While")
+	return st
 }
 
 func routineWord(r *Routine) string {
@@ -280,12 +345,27 @@ func routineWord(r *Routine) string {
 	return "procedure"
 }
 
-func (p *parser) statement(r *Routine) Stmt {
+func (p *parser) statement(r *Routine, loop bool) Stmt {
 	t := p.tok
+	switch kw(t) {
+	case "if":
+		return p.ifStmt(r, loop)
+	case "while":
+		return p.whileStmt(r)
+	case "break", "continue":
+		p.step()
+		if !loop {
+			p.fail(t.pos, "%q outside a loop", t.text)
+		}
+		if kw(t) == "break" {
+			return &Break{Pos: t.pos}
+		}
+		return &Continue{Pos: t.pos}
+	}
 	if k := kw(t); k == "return" {
 		p.step()
 		ret := &Return{Pos: t.pos}
-		hasValue := !p.isOp(";") && kw(p.tok) != "endprocedure" && kw(p.tok) != "endfunction"
+		hasValue := !p.isOp(";") && !isTerminator(kw(p.tok))
 		if hasValue {
 			ret.Value = p.expr()
 		}

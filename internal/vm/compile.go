@@ -31,8 +31,10 @@ const (
 	opCheckBool
 	opJmpFalseKeep // a — адрес; при Ложь переход, значение остаётся
 	opJmpTrueKeep
-	opCall // a — индекс подпрограммы
-	opRet  // результат — вершина стека
+	opJmp      // a — адрес
+	opJmpIfNot // a — адрес; снимает условие, оно обязано быть булевым
+	opCall     // a — индекс подпрограммы
+	opRet      // результат — вершина стека
 	opRetUndef
 )
 
@@ -91,6 +93,13 @@ type compiler struct {
 	slots    map[string]int
 	byRef    map[string]bool
 	err      *Error
+	loops    []*loopCtx
+}
+
+// loopCtx — адреса Прервать, ждущие конца цикла, и адрес Продолжить.
+type loopCtx struct {
+	start  int
+	breaks []int
 }
 
 func (c *compiler) emit(op opcode, a int, pos bsl.Pos) int {
@@ -143,6 +152,15 @@ func (c *compiler) stmt(s bsl.Stmt) {
 		}
 		c.expr(s.Value)
 		c.emit(opStore, slot, s.Position())
+	case *bsl.If:
+		c.ifStmt(s)
+	case *bsl.While:
+		c.whileStmt(s)
+	case *bsl.Break:
+		l := c.loops[len(c.loops)-1]
+		l.breaks = append(l.breaks, c.emit(opJmp, 0, s.Position()))
+	case *bsl.Continue:
+		c.emit(opJmp, c.loops[len(c.loops)-1].start, s.Position())
 	case *bsl.CallStmt:
 		c.call(s.Call, false)
 		c.emit(opPop, 0, s.Position())
@@ -153,6 +171,47 @@ func (c *compiler) stmt(s bsl.Stmt) {
 		}
 		c.expr(s.Value)
 		c.emit(opRet, 0, s.Position())
+	}
+}
+
+func (c *compiler) block(body []bsl.Stmt) {
+	for _, s := range body {
+		c.stmt(s)
+	}
+}
+
+func (c *compiler) patch(at int) { c.fn.code[at].a = len(c.fn.code) }
+
+func (c *compiler) ifStmt(s *bsl.If) {
+	var ends []int
+	branch := func(cond bsl.Expr, body []bsl.Stmt) {
+		c.expr(cond)
+		skip := c.emit(opJmpIfNot, 0, cond.Position())
+		c.block(body)
+		ends = append(ends, c.emit(opJmp, 0, cond.Position()))
+		c.patch(skip)
+	}
+	branch(s.Cond, s.Then)
+	for _, e := range s.Elifs {
+		branch(e.Cond, e.Body)
+	}
+	c.block(s.Else)
+	for _, e := range ends {
+		c.patch(e)
+	}
+}
+
+func (c *compiler) whileStmt(s *bsl.While) {
+	l := &loopCtx{start: len(c.fn.code)}
+	c.expr(s.Cond)
+	exit := c.emit(opJmpIfNot, 0, s.Cond.Position())
+	c.loops = append(c.loops, l)
+	c.block(s.Body)
+	c.loops = c.loops[:len(c.loops)-1]
+	c.emit(opJmp, l.start, s.Position())
+	c.patch(exit)
+	for _, b := range l.breaks {
+		c.patch(b)
 	}
 }
 

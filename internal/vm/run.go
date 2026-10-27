@@ -109,6 +109,16 @@ func (p *Program) Run(ctx context.Context, name string, args []Value, opt Option
 			if !stack[len(stack)-1].b {
 				f.pc = in.a
 			}
+		case opJmp:
+			f.pc = in.a
+		case opJmpIfNot:
+			v := pop()
+			if v.kind != Bool {
+				return Value{}, rtErr(in.pos, "condition must be Boolean, got %s", v.kind)
+			}
+			if !v.b {
+				f.pc = in.a
+			}
 		case opJmpTrueKeep:
 			if stack[len(stack)-1].b {
 				f.pc = in.a
