@@ -66,6 +66,15 @@ func TestExpressions(t *testing.T) {
 		{"+7", "7"},
 		{`"a" + "b"`, "ab"},
 		{`"x" + """q"""`, `x"q"`},
+		{"2 * 3", "6"},
+		{"0.1 * 0.2", "0.02"},
+		{"1 / 4", "0.25"},
+		{"7 % 3", "1"},
+		{"-7 % 3", "-1"},
+		{"2 + 3 * 4", "14"},
+		{"(2 + 3) * 4", "20"},
+		{"10.500 - 2.250 * 2", "6.000"},
+		{"8 / 4 / 2", "1"},
 		{"1 < 2", "Истина"},
 		{"2 <= 2.0", "Истина"},
 		{"3 > 4", "Ложь"},
@@ -116,6 +125,13 @@ func TestRuntimeErrors(t *testing.T) {
 		{"Истина < Ложь", "cannot compare Boolean and Boolean"},
 		{"Неопределено > 1", "cannot compare Undefined and Number"},
 		{"99999999999999999999999999999999 + 1", "overflow"},
+		{"99999999999999999999999999999999 * 2", "overflow"},
+		{"1 / 3", "not exactly representable"},
+		{"1 / 0", "division by zero"},
+		{"5 % 0.0", "division by zero"},
+		{`"a" * 2`, "cannot multiply String and Number"},
+		{"1 / Неопределено", "cannot divide Number and Undefined"},
+		{"Истина % 2", "cannot take the remainder of Boolean and Number"},
 	}
 	for _, c := range cases {
 		if c.msg == "" {
@@ -242,8 +258,6 @@ func TestCompileErrors(t *testing.T) {
 		{"procedure value", "Процедура П()\nКонецПроцедуры\nФункция Ф()\nВозврат П();\nКонецФункции", 4, 9, "does not return a value"},
 		{"by-reference assign", "Процедура П(А)\nА = 1;\nКонецПроцедуры", 2, 1, "by-reference parameter"},
 		{"undeclared assign", "Процедура П()\nА = 1;\nКонецПроцедуры", 2, 1, "undeclared variable"},
-		{"multiply", "Функция Ф()\nВозврат 2 * 3;\nКонецФункции", 2, 11, "operator * is not supported yet"},
-		{"divide", "Функция Ф()\nВозврат 6 / 3;\nКонецФункции", 2, 11, "operator / is not supported yet"},
 		{"module var", "Перем А;\nПроцедура П()\nКонецПроцедуры", 1, 1, "module-level variables"},
 		{"local duplicates param", "Процедура П(А)\nПерем а;\nКонецПроцедуры", 2, 1, "duplicates"},
 	}

@@ -422,3 +422,135 @@ func BenchmarkAdd(b *testing.B) {
 		b.Fatalf("неожиданный результат %q", acc.String())
 	}
 }
+
+func TestMul(t *testing.T) {
+	cases := []struct{ a, b, want string }{
+		{"2", "3", "6"},
+		{"0.1", "0.2", "0.02"},
+		{"2.50", "4", "10.00"},
+		{"-1.5", "2", "-3.0"},
+		{"-1.5", "-2", "3.0"},
+		{"0", "5.25", "0.00"},
+		{"0", "-5", "0"},
+		{"1" + strings.Repeat("0", 30), "10", "1" + strings.Repeat("0", 31)},
+		{max32, "1", max32},
+		{max32, "-1", "-" + max32},
+		// масштаб суммы (40) не помещается: лишние нули отбрасываются до масштаба 32
+		{"0.50000000000000000000", "0.20000000000000000000", "0.1" + strings.Repeat("0", 31)},
+	}
+	for _, c := range cases {
+		got, err := mustParse(t, c.a).Mul(mustParse(t, c.b))
+		if err != nil || got.String() != c.want {
+			t.Errorf("Mul(%s, %s) = %q, %v; want %q", c.a, c.b, got.String(), err, c.want)
+		}
+		if got.Sign() == 0 && got.neg {
+			t.Errorf("Mul(%s, %s): отрицательный ноль", c.a, c.b)
+		}
+	}
+	for _, c := range [][2]string{
+		{max32, "2"},
+		{max32, max32},
+		{"10000000000000000", "10000000000000000"},
+		// 1e-20 * 1e-20 = 1e-40: не помещается в масштаб 32
+		{"0.00000000000000000001", "0.00000000000000000001"},
+	} {
+		if got, err := mustParse(t, c[0]).Mul(mustParse(t, c[1])); !errors.Is(err, ErrOverflow) {
+			t.Errorf("Mul(%s, %s) = %q, %v; want ErrOverflow", c[0], c[1], got.String(), err)
+		}
+	}
+}
+
+func TestDiv(t *testing.T) {
+	cases := []struct{ a, b, want string }{
+		{"6", "3", "2"},
+		{"1", "4", "0.25"},
+		{"1.00", "4", "0.25"},
+		{"10", "0.5", "20"},
+		{"-1", "8", "-0.125"},
+		{"1", "-8", "-0.125"},
+		{"-1", "-8", "0.125"},
+		{"0", "7", "0"},
+		{"7.5", "2.5", "3"},
+		{"1", "1024", "0.0009765625"},
+		{"1", "4294967296", "0." + strings.Repeat("0", 9) + "23283064365386962890625"},
+		{max32, "1", max32},
+	}
+	for _, c := range cases {
+		got, err := mustParse(t, c.a).Div(mustParse(t, c.b))
+		if err != nil || got.String() != c.want {
+			t.Errorf("Div(%s, %s) = %q, %v; want %q", c.a, c.b, got.String(), err, c.want)
+		}
+	}
+	for _, c := range [][2]string{{"1", "3"}, {"2", "3"}, {"1", "7"}, {"0.1", "3"}} {
+		if got, err := mustParse(t, c[0]).Div(mustParse(t, c[1])); !errors.Is(err, ErrInexact) {
+			t.Errorf("Div(%s, %s) = %q, %v; want ErrInexact", c[0], c[1], got.String(), err)
+		}
+	}
+	for _, c := range []string{"0", "0.00"} {
+		if _, err := mustParse(t, "5").Div(mustParse(t, c)); !errors.Is(err, ErrDivideByZero) {
+			t.Errorf("Div(5, %s) error = %v", c, err)
+		}
+	}
+	// 1/2^40 имеет 40 цифр после точки: не выражается в масштабе 32
+	if got, err := mustParse(t, "1").Div(mustParse(t, "1099511627776")); !errors.Is(err, ErrInexact) {
+		t.Errorf("Div(1, 2^40) = %q, %v; want ErrInexact", got.String(), err)
+	}
+}
+
+func TestMod(t *testing.T) {
+	cases := []struct{ a, b, want string }{
+		{"7", "3", "1"},
+		{"-7", "3", "-1"},
+		{"7", "-3", "1"},
+		{"-7", "-3", "-1"},
+		{"7.5", "2", "1.5"},
+		{"7", "2.5", "2.0"},
+		{"6", "3", "0"},
+		{"0.3", "0.1", "0.0"},
+		{"1", "3", "1"},
+		{"5.25", "0.5", "0.25"},
+	}
+	for _, c := range cases {
+		got, err := mustParse(t, c.a).Mod(mustParse(t, c.b))
+		if err != nil || got.String() != c.want {
+			t.Errorf("Mod(%s, %s) = %q, %v; want %q", c.a, c.b, got.String(), err, c.want)
+		}
+		if got.Sign() == 0 && got.neg {
+			t.Errorf("Mod(%s, %s): отрицательный ноль", c.a, c.b)
+		}
+	}
+	if _, err := mustParse(t, "5").Mod(mustParse(t, "0.0")); !errors.Is(err, ErrDivideByZero) {
+		t.Errorf("Mod by zero error = %v", err)
+	}
+}
+
+// Свойство: для точного частного q = a/b выполняется q*b == a; остаток
+// согласован с делением: a == b*trunc(a/b) + a mod b.
+func TestMulDivProperties(t *testing.T) {
+	r := rand.New(rand.NewPCG(3, 4))
+	var divs, muls int
+	for i := 0; i < 5000; i++ {
+		a, b := mustParse(t, randNumber(r)), mustParse(t, randNumber(r))
+		if q, err := a.Div(b); err == nil {
+			divs++
+			back, err := q.Mul(b)
+			if err != nil || back.Cmp(a) != 0 {
+				t.Fatalf("(%s / %s) * %s = %q, %v", a, b, b, back.String(), err)
+			}
+		}
+		if p, err := a.Mul(b); err == nil {
+			muls++
+			if p.Sign() != a.Sign()*b.Sign() {
+				t.Fatalf("sign of %s * %s = %s", a, b, p)
+			}
+			if !b.isZero() {
+				if q, err := p.Div(b); err == nil && q.Cmp(a) != 0 {
+					t.Fatalf("(%s * %s) / %s = %s", a, b, b, q)
+				}
+			}
+		}
+	}
+	if divs < 10 || muls < 200 {
+		t.Fatalf("выборка вырождена: divs=%d muls=%d", divs, muls)
+	}
+}

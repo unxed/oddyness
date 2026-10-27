@@ -19,6 +19,9 @@ const (
 	opNot
 	opAdd
 	opSub
+	opMul
+	opDiv
+	opMod
 	opEq
 	opNe
 	opLt
@@ -58,8 +61,8 @@ func fail(pos bsl.Pos, format string, args ...any) *Error {
 	return &Error{Pos: pos, Msg: fmt.Sprintf(format, args...)}
 }
 
-// Compile компилирует модуль. Переменные уровня модуля, значения параметров по
-// умолчанию, умножение, деление и остаток пока не поддержаны и дают ошибку.
+// Compile компилирует модуль. Переменные уровня модуля пока не поддержаны и
+// дают ошибку компиляции.
 func Compile(m *bsl.Module) (*Program, error) {
 	if len(m.Vars) > 0 {
 		return nil, fail(m.Vars[0].Position(), "module-level variables are not supported yet")
@@ -225,7 +228,7 @@ func (c *compiler) expr(e bsl.Expr) {
 }
 
 var binaryOps = map[string]opcode{
-	"+": opAdd, "-": opSub, "=": opEq, "<>": opNe,
+	"+": opAdd, "-": opSub, "*": opMul, "/": opDiv, "%": opMod, "=": opEq, "<>": opNe,
 	"<": opLt, ">": opGt, "<=": opLe, ">=": opGe,
 }
 
@@ -243,8 +246,6 @@ func (c *compiler) binary(e *bsl.Binary) {
 		c.expr(e.Y)
 		c.emit(opCheckBool, 0, e.Y.Position())
 		c.fn.code[j].a = len(c.fn.code)
-	case "*", "/", "%":
-		c.fail(e.Position(), "operator %s is not supported yet (exact multiplication and division rules are not defined)", e.Op)
 	default:
 		c.expr(e.X)
 		c.expr(e.Y)

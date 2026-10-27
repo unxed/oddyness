@@ -104,17 +104,13 @@ func TestBSLCheckErrors(t *testing.T) {
 }
 
 func TestBSLRun(t *testing.T) {
-	path := writeFile(t, "calc.bsl", "Функция Сумма(Знач А, Знач Б)\n\tВозврат А + Б;\nКонецФункции\n\nФункция Умножить(А)\n\tВозврат А * 2;\nКонецФункции\n\nФункция Неверно()\n\tВозврат 1 + \"а\";\nКонецФункции\n")
-	// Умножение в модуле не компилируется: весь модуль отклоняется явной ошибкой.
+	good := writeFile(t, "good.bsl", "Функция Сумма(Знач А, Знач Б)\n\tВозврат А + Б;\nКонецФункции\n\nФункция Неверно()\n\tВозврат 1 + \"а\";\nКонецФункции\n\nФункция Привет(Имя)\n\tВозврат \"Привет, \" + Имя;\nКонецФункции\n\nФункция Доля(А, Б)\n\tВозврат А / Б;\nКонецФункции\n\nФункция Стоимость(Знач Кол, Знач Цена)\n\tВозврат Кол * Цена;\nКонецФункции\n")
+	bad := writeFile(t, "bad.bsl", "Функция Ф()\n\tВозврат Икс;\nКонецФункции\n")
 	var stdout, stderr bytes.Buffer
-	if got := run(append([]string{"bsl", "run", path}, "Сумма", "1", "2"), &stdout, &stderr); got != 1 {
-		t.Fatalf("exit = %d, want 1", got)
+	if got := run([]string{"bsl", "run", bad, "Ф"}, &stdout, &stderr); got != 1 || stdout.String() != "" ||
+		stderr.String() != bad+": compile error: 2:10: unknown name \"Икс\"\n" {
+		t.Errorf("compile error: exit=%d stdout=%q stderr=%q", got, stdout.String(), stderr.String())
 	}
-	if want := path + ": compile error: 6:12: operator * is not supported yet"; !strings.HasPrefix(stderr.String(), want) {
-		t.Errorf("stderr = %q, want prefix %q", stderr.String(), want)
-	}
-
-	good := writeFile(t, "good.bsl", "Функция Сумма(Знач А, Знач Б)\n\tВозврат А + Б;\nКонецФункции\n\nФункция Неверно()\n\tВозврат 1 + \"а\";\nКонецФункции\n\nФункция Привет(Имя)\n\tВозврат \"Привет, \" + Имя;\nКонецФункции\n")
 	for _, c := range []struct {
 		args   []string
 		code   int
@@ -124,6 +120,10 @@ func TestBSLRun(t *testing.T) {
 		{[]string{"Сумма", "10.500", "2.250"}, 0, "12.750\n", ""},
 		{[]string{"сумма", "0.1", "0.2"}, 0, "0.3\n", ""},
 		{[]string{"Привет", "мир"}, 0, "Привет, мир\n", ""},
+		{[]string{"Стоимость", "2.250", "4"}, 0, "9.000\n", ""},
+		{[]string{"Доля", "1", "4"}, 0, "0.25\n", ""},
+		{[]string{"Доля", "1", "3"}, 1, "", good + ": runtime error: 14:12: value: result is not exactly representable\n"},
+		{[]string{"Доля", "1", "0"}, 1, "", good + ": runtime error: 14:12: value: division by zero\n"},
 		{[]string{"Неверно"}, 1, "", good + ": runtime error: 6:12: cannot add Number and String\n"},
 		{[]string{"Нет"}, 1, "", good + ": runtime error: unknown routine \"Нет\"\n"},
 		{[]string{"Сумма", "1"}, 1, "", good + ": runtime error: \"Сумма\" takes 2 arguments, got 1\n"},

@@ -113,7 +113,7 @@ func (p *Program) Run(ctx context.Context, name string, args []Value, opt Option
 			if stack[len(stack)-1].b {
 				f.pc = in.a
 			}
-		case opAdd, opSub:
+		case opAdd, opSub, opMul, opDiv, opMod:
 			b, a := pop(), pop()
 			r, err := arith(in, a, b)
 			if err != nil {
@@ -160,10 +160,17 @@ func arith(in instr, a, b Value) (Value, error) {
 	case a.kind == Number && b.kind == Number:
 		var r Value
 		var err error
-		if in.op == opAdd {
+		switch in.op {
+		case opAdd:
 			r.num, err = a.num.Add(b.num)
-		} else {
+		case opSub:
 			r.num, err = a.num.Sub(b.num)
+		case opMul:
+			r.num, err = a.num.Mul(b.num)
+		case opDiv:
+			r.num, err = a.num.Div(b.num)
+		default:
+			r.num, err = a.num.Mod(b.num)
 		}
 		if err != nil {
 			return Value{}, rtErr(in.pos, "%v", err)
@@ -173,10 +180,7 @@ func arith(in instr, a, b Value) (Value, error) {
 	case in.op == opAdd && a.kind == String && b.kind == String:
 		return StringValue(a.str + b.str), nil
 	}
-	verb := "add"
-	if in.op == opSub {
-		verb = "subtract"
-	}
+	verb := map[opcode]string{opAdd: "add", opSub: "subtract", opMul: "multiply", opDiv: "divide", opMod: "take the remainder of"}[in.op]
 	return Value{}, rtErr(in.pos, "cannot %s %s and %s", verb, a.kind, b.kind)
 }
 
