@@ -156,6 +156,12 @@ func (s *Store) DeleteDocument(ctx context.Context, docID string, id int64) erro
 		return err
 	}
 	return s.inTx(ctx, func(tx *sql.Tx) error {
+		// движения удаляемого регистратора не должны остаться сиротами
+		for _, r := range s.model.Registers {
+			if _, err := tx.ExecContext(ctx, fmt.Sprintf(`DELETE FROM %s WHERE "recorder_doc" = ? AND "recorder_id" = ?`, regTable(r.ID)), d.ID, id); err != nil {
+				return mapErr(err)
+			}
+		}
 		res, err := tx.ExecContext(ctx, fmt.Sprintf(`DELETE FROM %s WHERE "id" = ?`, docTable(d.ID)), id)
 		if err != nil {
 			return mapErr(err)

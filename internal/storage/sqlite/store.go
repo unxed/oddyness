@@ -204,6 +204,15 @@ func (s *Store) createSchema(fp string) error {
 			stmts = append(stmts, indexes...)
 		}
 	}
+	for _, r := range s.model.Registers {
+		fields := regFields(&r)
+		cols, tail, indexes := columnDefs("reg_"+r.ID, regTable(r.ID), fields)
+		head := []string{`"id" INTEGER PRIMARY KEY`, `"recorder_doc" TEXT NOT NULL`, `"recorder_id" INTEGER NOT NULL`, `"line" INTEGER NOT NULL`}
+		tail = append(tail, `UNIQUE ("recorder_doc", "recorder_id", "line")`)
+		stmts = append(stmts, fmt.Sprintf(`CREATE TABLE %s (%s)`, regTable(r.ID), strings.Join(append(head, append(cols, tail...)...), ", ")))
+		stmts = append(stmts, indexes...)
+		stmts = append(stmts, fmt.Sprintf(`CREATE INDEX "r_%s_recorder" ON %s ("recorder_doc", "recorder_id")`, r.ID, regTable(r.ID)))
+	}
 	for _, q := range stmts {
 		if _, err := tx.Exec(q); err != nil {
 			return fmt.Errorf("sqlite: schema: %w", err)

@@ -18,6 +18,9 @@ func TestLoadSmallStock(t *testing.T) {
 	if m.Version != 1 || len(m.Catalogs) != 1 {
 		t.Fatalf("model = %+v", m)
 	}
+	if len(m.Registers) != 1 || m.Registers[0].ID != "stock" || len(m.Registers[0].Dimensions) != 1 || len(m.Registers[0].Resources) != 1 {
+		t.Errorf("registers = %+v", m.Registers)
+	}
 	if len(m.Documents) != 2 || m.Documents[0].ID != "receipt" || m.Documents[1].ID != "issue" {
 		t.Errorf("documents = %+v", m.Documents)
 	}
@@ -235,6 +238,59 @@ func TestDocumentDiagnostics(t *testing.T) {
 		{"broken reference in a table", docCfg(docWith(numberField, `{"id":"t1","name":"Строки","fields":[{"id":"t1p","name":"Товар","type":"ref","target":"nope"}]}`)), "documents[0].tables[0].fields[0].target", "broken reference"},
 		{"unknown type in a table", docCfg(docWith(numberField, `{"id":"t1","name":"Строки","fields":[{"id":"t1p","name":"Т","type":"money"}]}`)), "documents[0].tables[0].fields[0].type", "unknown type"},
 		{"unique on a date", docCfg(docWith(`{"id":"dd","name":"Дата","type":"date","unique":true}`, "")), "documents[0].fields[0].unique", "only supported for type string"},
+	}
+	for _, c := range cases {
+		_, err := Parse("m.json", []byte(c.src))
+		var e *Error
+		if !errors.As(err, &e) || e.Path != c.path || !strings.Contains(e.Msg, c.msg) {
+			t.Errorf("%s: got %v; want path %q containing %q", c.name, err, c.path, c.msg)
+		}
+	}
+}
+
+func regCfg(regs string) string {
+	return `{"version":1,"catalogs":[{"id":"c1","name":"Товары","fields":[` + okField + `]}],"registers":[` + regs + `]}`
+}
+
+const (
+	dimField = `{"id":"r-prod","name":"Товар","type":"ref","target":"c1","required":true}`
+	resField = `{"id":"r-qty","name":"Количество","type":"number","digits":15,"scale":3}`
+)
+
+func regWith(dims, res string) string {
+	return `{"id":"r1","name":"Запасы","dimensions":[` + dims + `],"resources":[` + res + `]}`
+}
+
+func TestRegistersLoad(t *testing.T) {
+	m, err := Parse("m.json", []byte(regCfg(regWith(dimField, resField))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := m.Registers[0]
+	if r.ID != "r1" || len(r.Dimensions) != 1 || len(r.Resources) != 1 || r.Resources[0].TypeString() != "number(15,3)" {
+		t.Errorf("register = %+v", r)
+	}
+	// строковое и булево измерения допустимы
+	if _, err := Parse("m.json", []byte(regCfg(regWith(dimField+`,{"id":"r-s","name":"Склад","type":"string"},{"id":"r-b","name":"Флаг","type":"boolean"}`, resField)))); err != nil {
+		t.Errorf("string and boolean dimensions: %v", err)
+	}
+}
+
+func TestRegisterDiagnostics(t *testing.T) {
+	cases := []struct {
+		name, src, path, msg string
+	}{
+		{"no dimensions", regCfg(regWith("", resField)), "registers[0].dimensions", "has no dimensions"},
+		{"no resources", regCfg(regWith(dimField, "")), "registers[0].resources", "has no resources"},
+		{"empty name", regCfg(`{"id":"r1","name":"","dimensions":[` + dimField + `],"resources":[` + resField + `]}`), "registers[0].name", "name is required"},
+		{"duplicate id", regCfg(`{"id":"c1","name":"Р","dimensions":[` + dimField + `],"resources":[` + resField + `]}`), "registers[0].id", `duplicate id "c1"`},
+		{"duplicate register name", regCfg(regWith(dimField, resField) + `,{"id":"r2","name":"запасы","dimensions":[{"id":"x1","name":"А","type":"string"}],"resources":[{"id":"x2","name":"Б","type":"number","digits":5,"scale":0}]}`), "registers[1].name", "duplicate register name"},
+		{"number dimension", regCfg(regWith(`{"id":"r-n","name":"Число","type":"number","digits":5,"scale":0}`, resField)), "registers[0].dimensions[0].type", "cannot be a dimension"},
+		{"string resource", regCfg(regWith(dimField, `{"id":"r-s","name":"Текст","type":"string"}`)), "registers[0].resources[0].type", "must be a number"},
+		{"resource repeats dimension name", regCfg(regWith(dimField, `{"id":"r-q2","name":"товар","type":"number","digits":5,"scale":0}`)), "registers[0].resources[0].name", "repeats a dimension name"},
+		{"broken dimension reference", regCfg(regWith(`{"id":"r-p","name":"Товар","type":"ref","target":"nope"}`, resField)), "registers[0].dimensions[0].target", "broken reference"},
+		{"resource id repeats dimension id", regCfg(regWith(dimField, `{"id":"r-prod","name":"Кол","type":"number","digits":5,"scale":0}`)), "registers[0].resources[0].id", `duplicate id "r-prod"`},
+		{"resource digits missing", regCfg(regWith(dimField, `{"id":"r-q","name":"Кол","type":"number"}`)), "registers[0].resources[0].digits", "between 1 and 32"},
 	}
 	for _, c := range cases {
 		_, err := Parse("m.json", []byte(c.src))
