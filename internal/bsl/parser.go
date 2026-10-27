@@ -28,14 +28,14 @@ var keywords = map[string]string{
 	"тогда": "then", "then": "then",
 	"пока": "while", "while": "while",
 	"цикл": "do", "do": "do", "конеццикла": "enddo", "enddo": "enddo",
+	"для": "for", "for": "for", "каждого": "each", "each": "each", "из": "in", "in": "in",
 	"прервать": "break", "break": "break", "продолжить": "continue", "continue": "continue",
 }
 
 // Зарезервированные слова языка 1С, которых в подмножестве нет: встретив их,
 // парсер отвечает явной ошибкой «не поддерживается», а не «неожиданный токен».
 var unsupportedWords = map[string]string{
-	"для": "for", "for": "for", "каждого": "each", "each": "each",
-	"из": "in", "in": "in", "по": "to", "to": "to",
+	"по": "to", "to": "to",
 	"попытка": "try", "try": "try", "исключение": "except", "except": "except",
 	"конецпопытки": "endtry", "endtry": "endtry",
 	"вызватьисключение": "raise", "raise": "raise",
@@ -329,6 +329,24 @@ func (p *parser) ifStmt(r *Routine, loop bool) Stmt {
 	return st
 }
 
+func (p *parser) forEachStmt(r *Routine) Stmt {
+	st := &ForEach{Pos: p.take().pos}
+	if kw(p.tok) != "each" {
+		p.unsupported(p.tok.pos, "numeric For loop (only For Each)")
+	}
+	p.step()
+	st.Var = p.name("loop variable").text
+	if kw(p.tok) != "in" {
+		p.fail(p.tok.pos, "expected \"Из\", found %s", p.tok.describe())
+	}
+	p.step()
+	st.Coll = p.expr()
+	p.expectThen("do")
+	st.Body = p.block(r, true, "For Each")
+	p.closeWith("enddo", "For Each")
+	return st
+}
+
 func (p *parser) whileStmt(r *Routine) Stmt {
 	st := &While{Pos: p.take().pos}
 	st.Cond = p.expr()
@@ -352,6 +370,8 @@ func (p *parser) statement(r *Routine, loop bool) Stmt {
 		return p.ifStmt(r, loop)
 	case "while":
 		return p.whileStmt(r)
+	case "for":
+		return p.forEachStmt(r)
 	case "break", "continue":
 		p.step()
 		if !loop {
@@ -531,6 +551,13 @@ func (p *parser) primary() Expr {
 			p.step()
 			if p.isOp("(") {
 				x = p.callArgs(t)
+			} else if p.isOp(".") {
+				p.step()
+				field := p.name("field")
+				if p.isOp("(") {
+					p.unsupported(p.tok.pos, "method call")
+				}
+				x = &Member{Pos: t.pos, Object: t.text, Field: field.text}
 			} else {
 				x = &Ident{Pos: t.pos, Name: t.text}
 			}

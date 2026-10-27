@@ -30,15 +30,52 @@ func rtErr(pos bsl.Pos, format string, args ...any) *Error {
 	return e
 }
 
-// Run вызывает подпрограмму name (регистр не важен) с аргументами. Проверяется
-// отмена ctx в начале и затем каждые 256 инструкций; превышение MaxSteps и
-// глубины вызовов — ошибки времени выполнения.
-func (p *Program) Run(ctx context.Context, name string, args []Value, opt Options) (Value, error) {
+// Machine выполняет программу и хранит буферы стека и кадров между вызовами:
+// после прогрева повторный Call не выделяет память под них. Машина не
+// потокобезопасна; на каждый поток — своя.
+type Machine struct {
+	p      *Program
+	stack  []Value
+	frames []frame
+}
+
+// NewMachine создаёт машину для программы.
+func (p *Program) NewMachine() *Machine {
+	return &Machine{p: p, stack: make([]Value, 0, 64), frames: make([]frame, 0, 16)}
+}
+
+// Entry — разрешённая точка входа: имя ищется один раз.
+type Entry struct{ idx int }
+
+// Entry находит подпрограмму по имени (регистр не важен).
+func (p *Program) Entry(name string) (Entry, error) {
 	idx, ok := p.index[strings.ToLower(name)]
 	if !ok {
-		return Value{}, rtErr(bsl.Pos{}, "unknown routine %q", name)
+		return Entry{}, rtErr(bsl.Pos{}, "unknown routine %q", name)
 	}
-	fn := p.funcs[idx]
+	return Entry{idx}, nil
+}
+
+// Run вызывает подпрограмму name (регистр не важен) на новой машине.
+func (p *Program) Run(ctx context.Context, name string, args []Value, opt Options) (Value, error) {
+	e, err := p.Entry(name)
+	if err != nil {
+		return Value{}, err
+	}
+	return p.NewMachine().Call(ctx, e, args, opt)
+}
+
+func (m *Machine) pop() Value {
+	v := m.stack[len(m.stack)-1]
+	m.stack = m.stack[:len(m.stack)-1]
+	return v
+}
+
+// Call вызывает подпрограмму с аргументами. Проверяется отмена ctx в начале и
+// затем каждые 256 инструкций; превышение MaxSteps и глубины вызовов — ошибки
+// времени выполнения. Значения аргументов копируются, таблицы — по ссылке.
+func (m *Machine) Call(ctx context.Context, e Entry, args []Value, opt Options) (Value, error) {
+	fn := m.p.funcs[e.idx]
 	if len(args) != fn.nparams {
 		return Value{}, rtErr(bsl.Pos{}, "%q takes %d arguments, got %d", fn.name, fn.nparams, len(args))
 	}
@@ -50,21 +87,15 @@ func (p *Program) Run(ctx context.Context, name string, args []Value, opt Option
 		maxSteps = DefaultMaxSteps
 	}
 
-	stack := make([]Value, 0, 64)
-	stack = append(stack, args...)
+	m.stack = append(m.stack[:0], args...)
 	for i := fn.nparams; i < fn.nslots; i++ {
-		stack = append(stack, Value{})
+		m.stack = append(m.stack, Value{})
 	}
-	frames := []frame{{fn: fn}}
+	m.frames = append(m.frames[:0], frame{fn: fn})
 	var steps int64
 
-	pop := func() Value {
-		v := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
-		return v
-	}
 	for {
-		f := &frames[len(frames)-1]
+		f := &m.frames[len(m.frames)-1]
 		in := f.fn.code[f.pc]
 		f.pc++
 		steps++
@@ -78,87 +109,109 @@ func (p *Program) Run(ctx context.Context, name string, args []Value, opt Option
 		}
 		switch in.op {
 		case opConst:
-			stack = append(stack, f.fn.consts[in.a])
+			m.stack = append(m.stack, f.fn.consts[in.a])
 		case opLoad:
-			stack = append(stack, stack[f.bp+in.a])
+			m.stack = append(m.stack, m.stack[f.bp+in.a])
 		case opStore:
-			stack[f.bp+in.a] = pop()
+			m.stack[f.bp+in.a] = m.pop()
 		case opPop:
-			pop()
+			m.pop()
 		case opNeg:
-			v := pop()
+			v := m.pop()
 			if v.kind != Number {
 				return Value{}, rtErr(in.pos, "cannot negate %s", v.kind)
 			}
-			stack = append(stack, NumberValue(v.num.Neg()))
+			m.stack = append(m.stack, NumberValue(v.num.Neg()))
 		case opPlus:
-			if v := stack[len(stack)-1]; v.kind != Number {
+			if v := m.stack[len(m.stack)-1]; v.kind != Number {
 				return Value{}, rtErr(in.pos, "unary + needs a Number, got %s", v.kind)
 			}
 		case opNot:
-			v := pop()
+			v := m.pop()
 			if v.kind != Bool {
 				return Value{}, rtErr(in.pos, "Not needs a Boolean, got %s", v.kind)
 			}
-			stack = append(stack, BoolValue(!v.b))
+			m.stack = append(m.stack, BoolValue(!v.b))
 		case opCheckBool:
-			if v := stack[len(stack)-1]; v.kind != Bool {
+			if v := m.stack[len(m.stack)-1]; v.kind != Bool {
 				return Value{}, rtErr(in.pos, "And/Or operand must be Boolean, got %s", v.kind)
 			}
 		case opJmpFalseKeep:
-			if !stack[len(stack)-1].b {
+			if !m.stack[len(m.stack)-1].b {
 				f.pc = in.a
 			}
 		case opJmp:
 			f.pc = in.a
 		case opJmpIfNot:
-			v := pop()
+			v := m.pop()
 			if v.kind != Bool {
 				return Value{}, rtErr(in.pos, "condition must be Boolean, got %s", v.kind)
 			}
 			if !v.b {
 				f.pc = in.a
 			}
+		case opIterNext:
+			coll := m.stack[f.bp+in.b]
+			if coll.kind != Collection {
+				return Value{}, rtErr(in.pos, "For Each needs a collection, got %s", coll.kind)
+			}
+			pos := &m.stack[f.bp+in.b+1]
+			if pos.i >= len(coll.tbl.rows) {
+				f.pc = in.a
+			} else {
+				m.stack[f.bp+in.c] = Value{kind: Row, tbl: coll.tbl, i: pos.i}
+				pos.i++
+			}
+		case opField:
+			row := &m.stack[len(m.stack)-1]
+			if row.kind != Row {
+				return Value{}, rtErr(in.pos, "cannot read field %q of %s", f.fn.consts[in.a].str, row.kind)
+			}
+			col, ok := row.tbl.index[f.fn.consts[in.a].str]
+			if !ok {
+				return Value{}, rtErr(in.pos, "unknown column %q", f.fn.consts[in.a].str)
+			}
+			*row = row.tbl.rows[row.i][col]
 		case opJmpTrueKeep:
-			if stack[len(stack)-1].b {
+			if m.stack[len(m.stack)-1].b {
 				f.pc = in.a
 			}
 		case opAdd, opSub, opMul, opDiv, opMod:
-			b, a := pop(), pop()
+			b, a := m.pop(), m.pop()
 			r, err := arith(in, a, b)
 			if err != nil {
 				return Value{}, err
 			}
-			stack = append(stack, r)
+			m.stack = append(m.stack, r)
 		case opEq, opNe:
-			b, a := pop(), pop()
+			b, a := m.pop(), m.pop()
 			eq := equal(a, b)
-			stack = append(stack, BoolValue(eq == (in.op == opEq)))
+			m.stack = append(m.stack, BoolValue(eq == (in.op == opEq)))
 		case opLt, opGt, opLe, opGe:
-			b, a := pop(), pop()
+			b, a := m.pop(), m.pop()
 			r, err := order(in, a, b)
 			if err != nil {
 				return Value{}, err
 			}
-			stack = append(stack, r)
+			m.stack = append(m.stack, r)
 		case opCall:
-			if len(frames) >= MaxCallDepth {
+			if len(m.frames) >= MaxCallDepth {
 				return Value{}, rtErr(in.pos, "call depth limit %d exceeded", MaxCallDepth)
 			}
-			callee := p.funcs[in.a]
-			bp := len(stack) - callee.nparams
+			callee := m.p.funcs[in.a]
+			bp := len(m.stack) - callee.nparams
 			for i := callee.nparams; i < callee.nslots; i++ {
-				stack = append(stack, Value{})
+				m.stack = append(m.stack, Value{})
 			}
-			frames = append(frames, frame{fn: callee, bp: bp})
+			m.frames = append(m.frames, frame{fn: callee, bp: bp})
 		case opRet, opRetUndef:
 			var result Value
 			if in.op == opRet {
-				result = pop()
+				result = m.pop()
 			}
-			stack = append(stack[:f.bp], result)
-			frames = frames[:len(frames)-1]
-			if len(frames) == 0 {
+			m.stack = append(m.stack[:f.bp], result)
+			m.frames = m.frames[:len(m.frames)-1]
+			if len(m.frames) == 0 {
 				return result, nil
 			}
 		}

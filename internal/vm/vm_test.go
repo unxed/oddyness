@@ -9,7 +9,7 @@ import (
 	"github.com/unxed/oddyness/internal/value"
 )
 
-func compile(t *testing.T, src string) *Program {
+func compile(t testing.TB, src string) *Program {
 	t.Helper()
 	m, err := bsl.Parse(src)
 	if err != nil {

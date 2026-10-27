@@ -205,8 +205,15 @@ func TestDiagnostics(t *testing.T) {
 		msg         string
 		unsupported bool
 	}{
-		{"unsupported for", "Процедура П()\n  Для Каждого Х Из Х Цикл\nКонецПроцедуры", 2, 3, `"Для" statement is not supported`, true},
-		{"unsupported for en", "Procedure P()\nFor Each X In Y Do\nEndProcedure", 2, 1, `"For" statement`, true},
+		{"numeric for", "Процедура П()\n  Для А = 1 По 3 Цикл\nКонецПроцедуры", 2, 7, "numeric For loop (only For Each) is not supported", true},
+		{"numeric for en", "Procedure P()\nFor X = 1 To 3 Do\nEndProcedure", 2, 5, "numeric For loop", true},
+		{"foreach without in", "Процедура П()\nДля Каждого Х Цикл\nКонецЦикла;\nКонецПроцедуры", 2, 15, `expected "Из"`, false},
+		{"foreach without do", "Процедура П()\nДля Каждого Х Из Т\nКонецЦикла;\nКонецПроцедуры", 3, 1, `expected "Цикл"`, false},
+		{"foreach reserved variable", "Процедура П()\nДля Каждого Если Из Т Цикл\nКонецЦикла;\nКонецПроцедуры", 2, 13, "reserved word", false},
+		{"unclosed foreach", "Процедура П()\nДля Каждого Х Из Т Цикл\n", 3, 1, "For Each is not closed", false},
+		{"member chain", "Процедура П()\nА = Б.В.Г;\nКонецПроцедуры", 2, 8, "member access and indexing", true},
+		{"member keyword field", "Процедура П()\nА = Б.Если;\nКонецПроцедуры", 2, 7, "reserved word", false},
+		{"method call", "Процедура П()\nА = Б.В(1);\nКонецПроцедуры", 2, 8, "method call is not supported", true},
 		{"if without then", "Процедура П()\nЕсли Истина\nКонецЕсли;\nКонецПроцедуры", 3, 1, `expected "Тогда"`, false},
 		{"unclosed if", "Процедура П()\nЕсли Истина Тогда\nКонецПроцедуры", 3, 1, "If: expected closing keyword", false},
 		{"unclosed if at eof", "Процедура П()\nЕсли Истина Тогда\n", 3, 1, "If is not closed", false},
@@ -267,7 +274,7 @@ func TestDiagnostics(t *testing.T) {
 // Ошибка выбирается по порядку текста: более ранняя ошибка разбора важнее
 // более поздней ошибки лексера.
 func TestFirstErrorWins(t *testing.T) {
-	e := parseErr(t, "Процедура П()\nДля\nА = 1 @ 2;\nКонецПроцедуры")
+	e := parseErr(t, "Процедура П()\nПопытка\nА = 1 @ 2;\nКонецПроцедуры")
 	if e.Pos.Line != 2 || !e.Unsupported {
 		t.Errorf("got %d:%d %q", e.Pos.Line, e.Pos.Col, e.Msg)
 	}
@@ -337,4 +344,35 @@ func TestControlFlowParse(t *testing.T) {
 	mustParse(t, "Function F(Val X)\nWHILE X > 0 DO\nIF X = 1 THEN Break; ELSIF X = 2 THEN Continue; ELSE X = 0; ENDIF\nENDDO;\nReturn X;\nEndFunction")
 	// Прервать внутри Если внутри цикла допустимо
 	mustParse(t, "Процедура П()\nПока Истина Цикл\nЕсли Истина Тогда\nПрервать;\nКонецЕсли;\nКонецЦикла;\nКонецПроцедуры")
+}
+
+func TestForEachAndMemberParse(t *testing.T) {
+	m := mustParse(t, `Функция Ф(Строки)
+	Перем С;
+	Для Каждого Стр Из Строки Цикл
+		Если Стр.Количество = 0 Тогда
+			Продолжить;
+		КонецЕсли;
+		С = С + Стр.Количество;
+	КонецЦикла;
+	Возврат С;
+КонецФункции
+`)
+	fe := m.Routines[0].Body[0].(*ForEach)
+	if fe.Var != "Стр" || exprString0(fe.Coll) != "Строки" || len(fe.Body) != 2 || fe.Position() != (Pos{3, 2}) {
+		t.Fatalf("foreach: %q %q %d %v", fe.Var, exprString0(fe.Coll), len(fe.Body), fe.Position())
+	}
+	as := fe.Body[1].(*Assign)
+	mem := as.Value.(*Binary).Y.(*Member)
+	if mem.Object != "Стр" || mem.Field != "Количество" || mem.Position() != (Pos{6, 11}) {
+		t.Errorf("member: %+v at %v", mem, mem.Position())
+	}
+	mustParse(t, "Procedure P(T)\nFOR EACH R IN T DO\nBreak;\nENDDO;\nEndProcedure")
+}
+
+func exprString0(e Expr) string {
+	if id, ok := e.(*Ident); ok {
+		return id.Name
+	}
+	return "?"
 }

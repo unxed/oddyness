@@ -34,14 +34,16 @@ const (
 	opJmp      // a — адрес
 	opJmpIfNot // a — адрес; снимает условие, оно обязано быть булевым
 	opCall     // a — индекс подпрограммы
+	opField    // a — константа с именем колонки (в нижнем регистре)
+	opIterNext // a — адрес выхода, b — слот коллекции (b+1 — позиция), c — слот переменной
 	opRet      // результат — вершина стека
 	opRetUndef
 )
 
 type instr struct {
-	op  opcode
-	a   int
-	pos bsl.Pos
+	op      opcode
+	a, b, c int
+	pos     bsl.Pos
 }
 
 type function struct {
@@ -126,13 +128,13 @@ func (c *compiler) routine(r *bsl.Routine) *Error {
 			c.slots[key] = len(c.slots)
 		}
 	}
-	c.fn.nslots = len(c.slots)
 	for _, s := range r.Body {
 		c.stmt(s)
 		if c.err != nil {
 			return c.err
 		}
 	}
+	c.fn.nslots = len(c.slots)
 	c.emit(opRetUndef, 0, r.Position())
 	return c.err
 }
@@ -156,6 +158,8 @@ func (c *compiler) stmt(s bsl.Stmt) {
 		c.ifStmt(s)
 	case *bsl.While:
 		c.whileStmt(s)
+	case *bsl.ForEach:
+		c.forEach(s)
 	case *bsl.Break:
 		l := c.loops[len(c.loops)-1]
 		l.breaks = append(l.breaks, c.emit(opJmp, 0, s.Position()))
@@ -215,6 +219,40 @@ func (c *compiler) whileStmt(s *bsl.While) {
 	}
 }
 
+// forEach: коллекция вычисляется один раз в скрытый слот, рядом — слот позиции.
+// Переменная цикла объявляется неявно, если её нет.
+func (c *compiler) forEach(s *bsl.ForEach) {
+	key := strings.ToLower(s.Var)
+	slot, ok := c.slots[key]
+	if ok && c.byRef[key] {
+		c.fail(s.Position(), "loop variable %q is a by-reference parameter; declare it with Знач", s.Var)
+		return
+	}
+	if !ok {
+		slot = len(c.slots)
+		c.slots[key] = slot
+	}
+	hidden := len(c.slots)
+	c.slots[fmt.Sprintf("\x00coll%d", hidden)] = hidden
+	c.slots[fmt.Sprintf("\x00pos%d", hidden)] = hidden + 1
+	c.expr(s.Coll)
+	c.emit(opStore, hidden, s.Position())
+	c.emit(opConst, c.constant(Value{}), s.Position())
+	c.emit(opStore, hidden+1, s.Position())
+	l := &loopCtx{start: len(c.fn.code)}
+	next := c.emit(opIterNext, 0, s.Position())
+	c.fn.code[next].b = hidden
+	c.fn.code[next].c = slot
+	c.loops = append(c.loops, l)
+	c.block(s.Body)
+	c.loops = c.loops[:len(c.loops)-1]
+	c.emit(opJmp, l.start, s.Position())
+	c.patch(next)
+	for _, b := range l.breaks {
+		c.patch(b)
+	}
+}
+
 func (c *compiler) fail(pos bsl.Pos, format string, args ...any) {
 	if c.err == nil {
 		c.err = fail(pos, format, args...)
@@ -269,6 +307,14 @@ func (c *compiler) expr(e bsl.Expr) {
 			return
 		}
 		c.emit(opLoad, slot, e.Position())
+	case *bsl.Member:
+		slot, ok := c.slots[strings.ToLower(e.Object)]
+		if !ok {
+			c.fail(e.Position(), "unknown name %q", e.Object)
+			return
+		}
+		c.emit(opLoad, slot, e.Position())
+		c.emit(opField, c.constant(StringValue(strings.ToLower(e.Field))), e.Position())
 	case *bsl.Call:
 		c.call(e, true)
 	case *bsl.Unary:
