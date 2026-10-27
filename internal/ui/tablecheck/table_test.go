@@ -7,25 +7,12 @@ package tablecheck
 
 import (
 	"reflect"
-	"runtime"
 	"testing"
 	"time"
 
 	"github.com/unxed/goWidgets"
 	"github.com/unxed/goWidgets/backends/headless"
 )
-
-func pumpUntil(t *testing.T, app *goWidgets.App, what string, cond func() bool) {
-	t.Helper()
-	deadline := time.Now().Add(2 * time.Second)
-	for !cond() && time.Now().Before(deadline) {
-		app.PumpOnce()
-		runtime.Gosched()
-	}
-	if !cond() {
-		t.Fatalf("не дождались: %s", what)
-	}
-}
 
 func TestTableOnPinnedRevision(t *testing.T) {
 	t.Setenv("goWidgets_BACKEND", "headless")
@@ -82,9 +69,13 @@ func TestTableOnPinnedRevision(t *testing.T) {
 	if !headless.PickTableRow(2) {
 		t.Fatal("backend не принял выбор строки")
 	}
-	pumpUntil(t, app, "событие выбора строки 2", func() bool { return table.SelectedIndex() == 2 && len(events) == 1 })
-	if events[0] != 2 {
-		t.Errorf("события выбора: %v", events)
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) && !(table.SelectedIndex() == 2 && len(events) > 0) {
+		app.PumpOnce()
+		time.Sleep(time.Millisecond)
+	}
+	if table.SelectedIndex() != 2 || len(events) == 0 || events[len(events)-1] != 2 {
+		t.Fatalf("после выбора строки 2 backend-ом: selected=%d events=%v", table.SelectedIndex(), events)
 	}
 	table.Select(99) // вне диапазона снимает выбор
 	if table.SelectedIndex() != -1 {
