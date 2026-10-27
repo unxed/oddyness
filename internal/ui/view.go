@@ -88,9 +88,9 @@ func Open(app *goWidgets.App, form *forms.Form, title string, onDone func()) (*V
 	}
 	win.Closing.On(scope, func(*goWidgets.CloseRequest) {
 		form.Close()
-		v.refresh()
+		v.refresh(false)
 	})
-	v.refresh()
+	v.refresh(true)
 	return v, nil
 }
 
@@ -101,7 +101,7 @@ func (v *View) input(cmd func() error) {
 		v.formErr.Text.Set(err.Error())
 		return
 	}
-	v.refresh()
+	v.refresh(false)
 }
 
 func (v *View) click(id string) {
@@ -111,18 +111,20 @@ func (v *View) click(id string) {
 	case v.closeID:
 		v.form.Close()
 	}
-	v.refresh()
+	v.refresh(true)
 }
 
-// refresh отражает состояние формы: ошибки полей и формы, фокус; закрытие
-// формы завершает работу окна.
-func (v *View) refresh() {
+// refresh отражает состояние формы: ошибки полей и формы; закрытие формы
+// завершает работу окна. Фокус перемещается только по команде формы (moveFocus):
+// форма не знает, куда пользователь перешёл Tab-ом, и отражение ввода не должно
+// возвращать фокус на прежний контрол (нативный сценарий нашёл именно эту ошибку).
+func (v *View) refresh(moveFocus bool) {
 	for id, l := range v.errors {
 		l.Text.Set(v.form.Error(id))
 	}
 	v.formErr.Text.Set(v.form.FormError())
 	if v.form.IsOpen() {
-		if f := v.focusers[v.form.Focused()]; f != nil {
+		if f := v.focusers[v.form.Focused()]; f != nil && moveFocus {
 			f()
 		}
 		return
