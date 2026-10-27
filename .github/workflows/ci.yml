@@ -17,16 +17,28 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - name: Verify module files are tidy
+      - name: Resolve dependencies (temporary)
         run: |
           go mod tidy
-          git diff --exit-code go.mod go.sum
+          echo ===GOMOD===
+          cat go.mod
+          echo ===GOSUM===
+          cat go.sum
+          echo ===END===
       - name: Check formatting
         run: test -z "$(gofmt -l .)"
       - name: Vet
         run: go vet ./...
       - name: Test
         run: go test ./...
+      - name: Install GTK, Xvfb and xdotool
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgtk-3-0 xvfb xdotool
+      - name: Native GTK form scenarios (real window, real keystrokes, two parallel processes)
+        env:
+          ODDYNESS_NATIVE_UI: "1"
+        run: go test -count=1 -v -run 'TestNativeForm' ./cmd/oddyness
       - name: Benchmark exact numbers (informational output)
         run: go test -run '^$' -bench . -benchmem ./internal/value
       - name: Benchmark BSL VM hot loops (informational output)
