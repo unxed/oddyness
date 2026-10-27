@@ -53,6 +53,56 @@ func writeFile(t *testing.T, name, content string) string {
 	return path
 }
 
+func TestConfigCheck(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	dir := filepath.Join("..", "..", "testdata", "configs", "small-stock")
+	if got := run([]string{"config", "check", dir}, &stdout, &stderr); got != 0 || stderr.String() != "" {
+		t.Fatalf("exit = %d, stderr = %q", got, stderr.String())
+	}
+	want := dir + ": ok, version 1, 1 catalogs\n" +
+		"catalog goods \"Товары\": 6 fields\n" +
+		"  goods-code Код string\n" +
+		"  goods-title Наименование string\n" +
+		"  goods-unit ЕдиницаИзмерения string\n" +
+		"  goods-active Используется boolean\n" +
+		"  goods-min МинимальныйОстаток number(15,3)\n" +
+		"  goods-analog Аналог ref(goods)\n"
+	if stdout.String() != want {
+		t.Errorf("stdout = %q, want %q", stdout.String(), want)
+	}
+}
+
+func TestConfigCheckErrors(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "metadata.json"), []byte("{\n  \"version\": 1,\n  \"catalogs\": [{\"id\": \"c\", \"name\": \"К\", \"fields\": [{\"id\": \"f\", \"name\": \"П\", \"type\": \"ref\", \"target\": \"zz\"}]}]\n}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if got := run([]string{"config", "check", dir}, &stdout, &stderr); got != 1 || stdout.String() != "" {
+		t.Fatalf("exit = %d, stdout = %q", got, stdout.String())
+	}
+	want := filepath.Join(dir, "metadata.json") + ": catalogs[0].fields[0].target: broken reference: no catalog with id \"zz\"\n"
+	if stderr.String() != want {
+		t.Errorf("stderr = %q, want %q", stderr.String(), want)
+	}
+	for name, args := range map[string][]string{
+		"no dir":  {"config", "check"},
+		"verb":    {"config", "load", dir},
+		"missing": {"config", "check", filepath.Join(dir, "absent")},
+	} {
+		stdout.Reset()
+		stderr.Reset()
+		code := run(args, &stdout, &stderr)
+		wantCode := 2
+		if name == "missing" {
+			wantCode = 1
+		}
+		if code != wantCode || stdout.String() != "" || stderr.Len() == 0 {
+			t.Errorf("%s: exit = %d, stdout = %q, stderr = %q", name, code, stdout.String(), stderr.String())
+		}
+	}
+}
+
 func TestBSLCheckOK(t *testing.T) {
 	src := "Функция Сумма(А, Б) Экспорт\n\tВозврат А + Б;\nКонецФункции\n\nПроцедура П()\nКонецПроцедуры\n"
 	// файл с BOM, как их пишет конфигуратор
