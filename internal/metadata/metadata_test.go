@@ -19,6 +19,9 @@ func TestLoadSmallStock(t *testing.T) {
 		t.Fatalf("model = %+v", m)
 	}
 	c := m.Catalogs[0]
+	if !c.Fields[0].Unique || c.Fields[1].Unique {
+		t.Errorf("unique flags: %+v", c.Fields)
+	}
 	if c.ID != "goods" || c.Name != "Товары" || len(c.Fields) != 6 {
 		t.Fatalf("catalog = %+v", c)
 	}
@@ -87,6 +90,8 @@ func TestDiagnostics(t *testing.T) {
 		{"ref without target", cfg(`{"id":"f1","name":"Код","type":"ref"}`), "catalogs[0].fields[0].target", "target is required", 0, 0},
 		{"broken reference", cfg(`{"id":"f1","name":"Код","type":"ref","target":"nope"}`), "catalogs[0].fields[0].target", `broken reference: no catalog with id "nope"`, 0, 0},
 		{"target on string", cfg(`{"id":"f1","name":"Код","type":"string","target":"c1"}`), "catalogs[0].fields[0]", "only valid for type ref", 0, 0},
+		{"unique on number", cfg(`{"id":"f1","name":"Код","type":"number","digits":5,"scale":0,"unique":true}`), "catalogs[0].fields[0].unique", "only supported for type string", 0, 0},
+		{"unique on ref", cfg(`{"id":"f1","name":"Код","type":"ref","target":"c1","unique":true}`), "catalogs[0].fields[0].unique", "only supported for type string", 0, 0},
 		{"reference to a field id", cfg(okField + `,{"id":"f2","name":"Ссылка","type":"ref","target":"f1"}`), "catalogs[0].fields[1].target", "broken reference", 0, 0},
 	}
 	for _, c := range cases {

@@ -5,7 +5,7 @@
       "id": "goods",
       "name": "Товары",
       "fields": [
-        {"id": "goods-code", "name": "Код", "type": "string"},
+        {"id": "goods-code", "name": "Код", "type": "string", "unique": true},
         {"id": "goods-title", "name": "Наименование", "type": "string"},
         {"id": "goods-unit", "name": "ЕдиницаИзмерения", "type": "string"},
         {"id": "goods-active", "name": "Используется", "type": "boolean"},
