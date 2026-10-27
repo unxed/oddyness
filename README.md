@@ -13,6 +13,7 @@
 приложения усилий, из которой можно вырастить платформу.
 
 Для локальной проверки из корня репозитория: `go run ./cmd/oddyness version`.
+Окно формы: `go run ./cmd/oddyness form testdata/configs/small-stock /tmp/s.db Товары` (нужна графическая сессия; [forms.md](docs/implementation/forms.md)).
 Хранилище: `go run ./cmd/oddyness db create testdata/configs/small-stock /tmp/s.db`, затем `catalog add|get|list` ([storage.md](docs/implementation/storage.md)).
 Проверка конфигурации: `go run ./cmd/oddyness config check testdata/configs/small-stock` (формат — [config-format.md](docs/implementation/config-format.md)).
 Разбор BSL: `go run ./cmd/oddyness bsl check <файл>` (подмножество — [bsl-subset.md](docs/implementation/bsl-subset.md)).

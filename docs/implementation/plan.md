@@ -49,7 +49,7 @@
 
 ### P04. Первая нативная форма и параллельный UI harness
 
-- Статус: in-progress, часть 2а из 3 (окно goWidgets `internal/ui` поверх формы, headless-прогон; PR https://github.com/unxed/oddyness/pull/13, `ci` https://github.com/unxed/oddyness/actions/runs/40584603362 на коммите `6bf525bb57c212f1b5fa7a3f2bec96e6ad4511e5`; `go test ./internal/ui`). Часть 1 завершена: PR https://github.com/unxed/oddyness/pull/12 (`internal/forms`, `docs/implementation/forms.md`). Осталось (часть 2б): команда запуска окна, реальное прокликивание на одном нативном backend (Xvfb, GTK) и два параллельных процесса-сценария с отдельными БД и дисплеями. Зависимости: P02.
+- Статус: сделано (проверен нативный backend GTK). Часть 1: PR https://github.com/unxed/oddyness/pull/12 (`internal/forms`). Часть 2а: PR https://github.com/unxed/oddyness/pull/13 (окно `internal/ui`, headless). Часть 2б: PR https://github.com/unxed/oddyness/pull/14, `ci` https://github.com/unxed/oddyness/actions/runs/40586347295 на коммите `68bb77dd4d74d3bb01e66c032c2d450dbf0fe806` — команда `oddyness form`, два параллельных сценария `TestNativeForm` в настоящем окне GTK под Xvfb с настоящими нажатиями клавиш, по отдельному процессу, дисплею и базе, сохранённое читается из базы; команды `ODDYNESS_NATIVE_UI=1 xvfb... go test -run TestNativeForm ./cmd/oddyness`, `go test ./internal/forms ./internal/ui`. Описание и ограничения — `docs/implementation/forms.md`. Не проверено: Qt, Win32, Cocoa, кириллица, мышь, оконный менеджер, DPI. Зависимости: P02.
 - Сделать: окно goWidgets с полями справочника и локальной валидацией формы;
   headless-модель, стабильные ID контролов, два изолированных сценария ввода.
 - Проверить: заполнение, обязательное поле, фокус, закрытие; два сценария
