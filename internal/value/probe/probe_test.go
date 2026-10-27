@@ -158,7 +158,6 @@ func TestCandidates(t *testing.T) {
 	}
 }
 
-
 func BenchmarkAddOwn(b *testing.B) {
 	x, _ := value.Parse("12345.678")
 	y, _ := value.Parse("0.002")
