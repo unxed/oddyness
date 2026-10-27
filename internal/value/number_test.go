@@ -554,3 +554,32 @@ func TestMulDivProperties(t *testing.T) {
 		t.Fatalf("выборка вырождена: divs=%d muls=%d", divs, muls)
 	}
 }
+
+func TestCheckPrecision(t *testing.T) {
+	cases := []struct {
+		n             string
+		digits, scale int
+		ok            bool
+	}{
+		{"999999999999.999", 15, 3, true},
+		{"-999999999999.999", 15, 3, true},
+		{"0.001", 15, 3, true},
+		{"0", 15, 3, true},
+		{"12345.670", 15, 3, true},
+		{"0.0001", 15, 3, false},
+		{"1000000000000", 15, 3, false},
+		{"1000000000000.000", 15, 3, false},
+		{"5", 1, 0, true},
+		{"10", 1, 0, false},
+		{"0.5", 1, 1, true},
+		{"1.5", 1, 1, false},
+		{max32, 32, 0, true},
+		{"0." + strings.Repeat("9", 32), 32, 32, true},
+	}
+	for _, c := range cases {
+		err := mustParse(t, c.n).CheckPrecision(c.digits, c.scale)
+		if (err == nil) != c.ok {
+			t.Errorf("%s in (%d,%d): err = %v, want ok=%v", c.n, c.digits, c.scale, err, c.ok)
+		}
+	}
+}
