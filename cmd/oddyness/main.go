@@ -149,7 +149,7 @@ func runConfig(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return 1
 	}
-	fmt.Fprintf(stdout, "%s: ok, version %d, %d catalogs, %d documents\n", args[1], m.Version, len(m.Catalogs), len(m.Documents))
+	fmt.Fprintf(stdout, "%s: ok, version %d, %d catalogs, %d documents, %d registers\n", args[1], m.Version, len(m.Catalogs), len(m.Documents), len(m.Registers))
 	for _, c := range m.Catalogs {
 		fmt.Fprintf(stdout, "catalog %s %q: %d fields\n", c.ID, c.Name, len(c.Fields))
 		for _, f := range c.Fields {
@@ -166,6 +166,15 @@ func runConfig(args []string, stdout, stderr io.Writer) int {
 			for _, f := range t.Fields {
 				fmt.Fprintf(stdout, "    %s %s %s\n", f.ID, f.Name, f.TypeString())
 			}
+		}
+	}
+	for _, r := range m.Registers {
+		fmt.Fprintf(stdout, "register %s %q: %d dimensions, %d resources\n", r.ID, r.Name, len(r.Dimensions), len(r.Resources))
+		for _, f := range r.Dimensions {
+			fmt.Fprintf(stdout, "  dimension %s %s %s\n", f.ID, f.Name, f.TypeString())
+		}
+		for _, f := range r.Resources {
+			fmt.Fprintf(stdout, "  resource %s %s %s\n", f.ID, f.Name, f.TypeString())
 		}
 	}
 	return 0

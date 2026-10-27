@@ -133,5 +133,29 @@
         }
       ]
     }
+  ],
+  "registers": [
+    {
+      "id": "stock",
+      "name": "Запасы",
+      "dimensions": [
+        {
+          "id": "stock-product",
+          "name": "Товар",
+          "type": "ref",
+          "target": "goods",
+          "required": true
+        }
+      ],
+      "resources": [
+        {
+          "id": "stock-qty",
+          "name": "Количество",
+          "type": "number",
+          "digits": 15,
+          "scale": 3
+        }
+      ]
+    }
   ]
 }

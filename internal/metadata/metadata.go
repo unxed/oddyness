@@ -72,11 +72,22 @@ type Document struct {
 	Tables []TablePart `json:"tables,omitempty"`
 }
 
+// Register — регистр накопления: измерения (по чему ведётся учёт) и ресурсы
+// (суммируемые числа). Каждое движение несёт регистратора (вид и номер
+// документа) и номер строки; они неявные и в метаданных не описываются.
+type Register struct {
+	ID         string  `json:"id"`
+	Name       string  `json:"name"`
+	Dimensions []Field `json:"dimensions"`
+	Resources  []Field `json:"resources"`
+}
+
 // Model — загруженная модель.
 type Model struct {
 	Version   int        `json:"version"`
 	Catalogs  []Catalog  `json:"catalogs"`
 	Documents []Document `json:"documents,omitempty"`
+	Registers []Register `json:"registers,omitempty"`
 }
 
 // Error — диагностика загрузки: файл, позиция (если известна), путь внутри
@@ -261,10 +272,10 @@ func (m *Model) validate(fail failFunc) error {
 			return fail(-1, cp+".fields", "catalog %q has no fields", c.Name)
 		}
 	}
-	checkFields := func(path, owner string, fields []Field) error {
+	checkFields := func(path, list, owner string, fields []Field) error {
 		fieldNames := map[string]string{}
 		for j, f := range fields {
-			fp := fmt.Sprintf("%s.fields[%d]", path, j)
+			fp := fmt.Sprintf("%s.%s[%d]", path, list, j)
 			if err := checkID(fp, f.ID); err != nil {
 				return err
 			}
@@ -282,7 +293,7 @@ func (m *Model) validate(fail failFunc) error {
 		return nil
 	}
 	for i, c := range m.Catalogs {
-		if err := checkFields(fmt.Sprintf("catalogs[%d]", i), fmt.Sprintf("catalog %q", c.Name), c.Fields); err != nil {
+		if err := checkFields(fmt.Sprintf("catalogs[%d]", i), "fields", fmt.Sprintf("catalog %q", c.Name), c.Fields); err != nil {
 			return err
 		}
 	}
@@ -302,7 +313,7 @@ func (m *Model) validate(fail failFunc) error {
 		if len(d.Fields) == 0 {
 			return fail(-1, dp+".fields", "document %q has no header fields", d.Name)
 		}
-		if err := checkFields(dp, fmt.Sprintf("document %q", d.Name), d.Fields); err != nil {
+		if err := checkFields(dp, "fields", fmt.Sprintf("document %q", d.Name), d.Fields); err != nil {
 			return err
 		}
 		tableNames := map[string]string{}
@@ -321,8 +332,52 @@ func (m *Model) validate(fail failFunc) error {
 			if len(tp.Fields) == 0 {
 				return fail(-1, tpath+".fields", "table %q has no fields", tp.Name)
 			}
-			if err := checkFields(tpath, fmt.Sprintf("table %q", tp.Name), tp.Fields); err != nil {
+			if err := checkFields(tpath, "fields", fmt.Sprintf("table %q", tp.Name), tp.Fields); err != nil {
 				return err
+			}
+		}
+	}
+	regNames := map[string]string{}
+	for i, r := range m.Registers {
+		rp := fmt.Sprintf("registers[%d]", i)
+		if err := checkID(rp, r.ID); err != nil {
+			return err
+		}
+		if r.Name == "" {
+			return fail(-1, rp+".name", "name is required")
+		}
+		if first, dup := regNames[strings.ToLower(r.Name)]; dup {
+			return fail(-1, rp+".name", "duplicate register name %q (first used at %s)", r.Name, first)
+		}
+		regNames[strings.ToLower(r.Name)] = rp
+		if len(r.Dimensions) == 0 {
+			return fail(-1, rp+".dimensions", "register %q has no dimensions", r.Name)
+		}
+		if len(r.Resources) == 0 {
+			return fail(-1, rp+".resources", "register %q has no resources", r.Name)
+		}
+		owner := fmt.Sprintf("register %q", r.Name)
+		if err := checkFields(rp, "dimensions", owner, r.Dimensions); err != nil {
+			return err
+		}
+		if err := checkFields(rp, "resources", owner, r.Resources); err != nil {
+			return err
+		}
+		for j, f := range r.Dimensions {
+			if f.Type == TypeNumber {
+				return fail(-1, fmt.Sprintf("%s.dimensions[%d].type", rp, j), "a number cannot be a dimension (numbers are summed, not grouped); use a resource")
+			}
+		}
+		dimNames := map[string]bool{}
+		for _, f := range r.Dimensions {
+			dimNames[strings.ToLower(f.Name)] = true
+		}
+		for j, f := range r.Resources {
+			if f.Type != TypeNumber {
+				return fail(-1, fmt.Sprintf("%s.resources[%d].type", rp, j), "a resource must be a number, got %q", f.Type)
+			}
+			if dimNames[strings.ToLower(f.Name)] {
+				return fail(-1, fmt.Sprintf("%s.resources[%d].name", rp, j), "resource name %q repeats a dimension name", f.Name)
 			}
 		}
 	}
