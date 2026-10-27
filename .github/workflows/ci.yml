@@ -29,12 +29,10 @@ jobs:
         working-directory: internal/value/probe
         env:
           CGO_ENABLED: "0"
-          GOFLAGS: -mod=mod
         run: |
           go vet ./...
           go test -v -run TestCandidates ./... | grep -E 'RESULT|^(ok|FAIL|---)'
           go test -run '^$' -bench . -benchmem ./...
-          cat go.sum
       - name: Build without CGO for Linux, Windows, and macOS
         shell: bash
         run: |
