@@ -41,6 +41,9 @@ func (b *Documents) tables(lines []map[string]any) map[string][]map[string]any {
 	return map[string][]map[string]any{b.doc.Tables[0].ID: lines}
 }
 
+// CanWrite сообщает, разрешена ли записи роль сессии хранилища (forms.WriteGate).
+func (b *Documents) CanWrite() bool { return b.store.CanWrite() }
+
 // List возвращает документы вида по возрастанию номера.
 func (b *Documents) List() ([]forms.DocRecord, error) {
 	docs, err := b.store.ListDocuments(context.Background(), b.doc.ID)

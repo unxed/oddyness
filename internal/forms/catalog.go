@@ -33,11 +33,15 @@ type Catalog struct {
 	rows     []Row
 	selected int // индекс выбранной строки, -1 — новая запись
 	listErr  string
+	readOnly bool // ядро не разрешает запись роли сессии
 }
 
 // NewCatalog читает список и открывает пустую карточку новой записи.
 func NewCatalog(c *metadata.Catalog, be Backend) (*Catalog, error) {
 	cat := &Catalog{catalog: c, be: be, selected: -1}
+	if g, ok := be.(WriteGate); ok {
+		cat.readOnly = !g.CanWrite()
+	}
 	cat.card = New(c, cat.save)
 	cat.card.KeepOpen(true)
 	if err := cat.Refresh(); err != nil {
@@ -45,6 +49,9 @@ func NewCatalog(c *metadata.Catalog, be Backend) (*Catalog, error) {
 	}
 	return cat, nil
 }
+
+// ReadOnly сообщает, что роль сессии не разрешает запись (см. Documents.ReadOnly).
+func (c *Catalog) ReadOnly() bool { return c.readOnly }
 
 // Card возвращает форму карточки (команды ввода и сохранения идут через неё; Save карточки сохраняет в ядро).
 func (c *Catalog) Card() *Form { return c.card }

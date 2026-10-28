@@ -46,6 +46,11 @@ func OpenCatalog(app *goWidgets.App, cat *forms.Catalog, title string, onDone fu
 	}
 	cv.View = v
 	v.afterSave = cv.reloadList
+	if cat.ReadOnly() {
+		// роль сессии не разрешает запись: карточка и команды записи недоступны, «Закрыть» и список работают
+		v.setEnabled(false, v.closeID)
+		cv.newB.Enabled.Set(false)
+	}
 	return cv, nil
 }
 

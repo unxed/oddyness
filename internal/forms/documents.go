@@ -53,7 +53,12 @@ type Documents struct {
 	lines    []map[string]any
 	lineSel  int // индекс выбранной строки, -1 — новая
 	listErr  string
+	readOnly bool // ядро не разрешает запись роли сессии (окно показывает команды недоступными)
 }
+
+// WriteGate — необязательная возможность backend: сообщает, разрешена ли записи роль сессии. Окно показывает недоступные
+// команды; защитой служат проверки ядра, а не окно (команда, выданная мимо окна, получает отказ ядра).
+type WriteGate interface{ CanWrite() bool }
 
 // NewDocuments читает список и открывает пустой новый документ.
 func NewDocuments(d *metadata.Document, be DocBackend) (*Documents, error) {
@@ -61,6 +66,9 @@ func NewDocuments(d *metadata.Document, be DocBackend) (*Documents, error) {
 		return nil, fmt.Errorf("forms: document %q has %d table parts; the document form supports at most one", d.ID, len(d.Tables))
 	}
 	docs := &Documents{doc: d, be: be, selected: -1, lineSel: -1}
+	if g, ok := be.(WriteGate); ok {
+		docs.readOnly = !g.CanWrite()
+	}
 	docs.header = NewFields(d.ID, d.Name, d.Fields, docs.persist)
 	docs.header.KeepOpen(true)
 	if len(d.Tables) == 1 {
@@ -79,6 +87,10 @@ func (d *Documents) Header() *Form { return d.header }
 
 // Line возвращает форму текущей строки (nil, если у вида нет табличной части); запись строки — SaveLine.
 func (d *Documents) Line() *Form { return d.line }
+
+// ReadOnly сообщает, что роль сессии не разрешает запись: окно показывает команды записи недоступными, а чтение
+// (список, выбор документа) работает. Команда записи мимо окна получает отказ ядра (ErrDenied) в Error.
+func (d *Documents) ReadOnly() bool { return d.readOnly }
 
 // HasLines сообщает, есть ли у вида документа табличная часть.
 func (d *Documents) HasLines() bool { return d.part != nil }
