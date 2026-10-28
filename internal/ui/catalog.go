@@ -55,24 +55,11 @@ func (cv *CatalogView) pick(i int) {
 		cv.formErr.Text.Set(err.Error())
 		return
 	}
-	cv.mirror()
+	cv.panel.mirror()
 	if i < 0 {
 		cv.table.Select(-1)
 	}
 	cv.refresh(true)
-}
-
-// mirror копирует тексты и флажки формы в виджеты; пересылка в форму на это время отключена.
-func (cv *CatalogView) mirror() {
-	cv.syncing = true
-	defer func() { cv.syncing = false }()
-	form := cv.cat.Card()
-	for id, e := range cv.edits {
-		e.Text.Set(form.Text(id))
-	}
-	for id, c := range cv.checks {
-		c.Checked.Set(form.Checked(id))
-	}
 }
 
 // reloadList показывает список из состояния каталога и выбирает сохранённую запись.
