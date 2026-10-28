@@ -93,7 +93,7 @@ func TestIssueRepostIsIdempotent(t *testing.T) {
 			t.Fatalf("post %d: %v", i, err)
 		}
 	}
-	eq(t, e.balances(), map[int64]string{1: "0"})
+	eq(t, e.balances(), map[int64]string{1: "0.000"})
 	if _, n := e.issueState(id); n != 1 {
 		t.Errorf("movements = %d", n)
 	}
@@ -119,7 +119,7 @@ func TestIssueS10SameProductLinesAreSummed(t *testing.T) {
 	if err := pl.Post(ctx, "issue", ok); err != nil {
 		t.Fatal(err)
 	}
-	eq(t, e.balances(), map[int64]string{1: "0", 2: "0"})
+	eq(t, e.balances(), map[int64]string{1: "0.000", 2: "0"})
 }
 
 // Товар без движений: остаток нуль, выдача отклоняется; пустая выдача проводится без движений.
