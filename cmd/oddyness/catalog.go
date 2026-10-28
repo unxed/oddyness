@@ -14,13 +14,18 @@ import (
 
 const catalogUsage = `usage:
   oddyness db create <config-dir> <db-file>
+  oddyness db backup <config-dir> <db-file> <backup-file>
+  oddyness db restore <config-dir> <backup-file> <new-db-file>
   oddyness catalog add <config-dir> <db-file> <catalog> <field>=<value>...
   oddyness catalog get <config-dir> <db-file> <catalog> <id>
   oddyness catalog list <config-dir> <db-file> <catalog>`
 
-// runDB выполняет `oddyness db create <config-dir> <db-file>`.
+// runDB выполняет `oddyness db create|backup|restore`. backup снимает консистентную копию базы (база открывается как
+// обычная сессия: занятая другим процессом отклоняется); restore создаёт новую базу из копии после проверки версии
+// схемы, конфигурации и целостности. Существующий файл ни одна команда не перезаписывает.
 func runDB(args []string, stdout, stderr io.Writer) int {
-	if len(args) != 3 || args[0] != "create" {
+	need := map[string]int{"create": 3, "backup": 4, "restore": 4}
+	if len(args) == 0 || need[args[0]] == 0 || len(args) != need[args[0]] {
 		fmt.Fprintln(stderr, catalogUsage)
 		return 2
 	}
@@ -29,14 +34,35 @@ func runDB(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return 1
 	}
-	s, err := sqlite.Create(args[2], m)
-	if err != nil {
+	fail := func(err error) int {
 		fmt.Fprintf(stderr, "oddyness: %v\n", err)
 		return 1
 	}
+	switch args[0] {
+	case "backup":
+		s, err := openSession(args[2], m)
+		if err != nil {
+			return fail(err)
+		}
+		defer s.Close()
+		if err := s.Backup(context.Background(), args[3]); err != nil {
+			return fail(err)
+		}
+		fmt.Fprintf(stdout, "%s: backup written\n", args[3])
+		return 0
+	case "restore":
+		if err := sqlite.Restore(context.Background(), args[2], args[3], m); err != nil {
+			return fail(err)
+		}
+		fmt.Fprintf(stdout, "%s: restored\n", args[2])
+		return 0
+	}
+	s, err := sqlite.Create(args[2], m)
+	if err != nil {
+		return fail(err)
+	}
 	if err := s.Close(); err != nil {
-		fmt.Fprintf(stderr, "oddyness: %v\n", err)
-		return 1
+		return fail(err)
 	}
 	fmt.Fprintf(stdout, "%s: created\n", args[2])
 	return 0
