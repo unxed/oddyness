@@ -16,16 +16,19 @@ import (
 	"github.com/unxed/oddyness/internal/value"
 )
 
-// nativeDocs — окно `oddyness documents` в отдельном процессе под своим дисплеем Xvfb; ввод — настоящие нажатия xdotool.
+// nativeDocs — окно приложения (`oddyness documents`, `oddyness report`) в отдельном процессе под своим дисплеем Xvfb;
+// ввод — настоящие нажатия xdotool.
 type nativeDocs struct {
 	x         xdo
 	tabs      func(n int)
 	mustAlive func(what string)
 }
 
-// runNativeDocuments поднимает Xvfb на display, запускает окно документов вида document над базой db, выполняет script
-// и проверяет чистое завершение процесса после script (скрипт заканчивается «Закрыть»). Базу после этого читает вызывающий.
-func runNativeDocuments(t *testing.T, display, document, db string, script func(w nativeDocs)) {
+// runNativeWindow поднимает Xvfb на display, запускает команду command (documents или report) над базой db и объектом
+// object (вид документа или отчёт), выполняет script и проверяет чистое завершение процесса после script (скрипт
+// заканчивается «Закрыть»). Возвращает stderr процесса: трассу команд (ODDYNESS_UI_TRACE=1). Базу после этого читает
+// вызывающий.
+func runNativeWindow(t *testing.T, display, command, object, db string, script func(w nativeDocs)) (trace string) {
 	t.Helper()
 	for _, tool := range []string{"Xvfb", "xdotool"} {
 		if _, err := exec.LookPath(tool); err != nil {
@@ -54,7 +57,7 @@ func runNativeDocuments(t *testing.T, display, document, db string, script func(
 		t.Fatalf("Xvfb did not start: %s", xvfbLog.String())
 	}
 
-	app := proc(t, ctx, "cli", "documents", configDir, db, document)
+	app := proc(t, ctx, "cli", command, configDir, db, object)
 	app.Env = append(app.Env, "DISPLAY="+display, "goWidgets_BACKEND=gtk", "ODDYNESS_UI_TRACE=1")
 	var out, errb bytes.Buffer
 	app.Stdout, app.Stderr = &out, &errb
@@ -88,7 +91,7 @@ func runNativeDocuments(t *testing.T, display, document, db string, script func(
 	}
 
 	var window string
-	title := "^oddyness documents " + document + "$"
+	title := "^oddyness " + command + " " + object + "$"
 	for i := 0; i < 300 && window == ""; i++ {
 		if !alive() {
 			t.Fatalf("the application exited before showing a window: %s", exitInfo())
@@ -127,7 +130,7 @@ func runNativeDocuments(t *testing.T, display, document, db string, script func(
 	for alive() {
 		select {
 		case <-deadline:
-			x.shot("not-exited-" + document)
+			x.shot("not-exited-" + object)
 			t.Fatalf("the application did not exit after Close\nstdout: %s\nstderr: %s", out.String(), errb.String())
 		case <-time.After(100 * time.Millisecond):
 		}
@@ -136,6 +139,7 @@ func runNativeDocuments(t *testing.T, display, document, db string, script func(
 		t.Fatalf("exit error=%v stdout=%q stderr=%q", waitErr, out.String(), errb.String())
 	}
 	t.Logf("trace:\n%s", errb.String())
+	return errb.String()
 }
 
 // openStore открывает базу после выхода процесса (ошибка — база ещё занята или повреждена).
@@ -179,7 +183,7 @@ func newBase(t *testing.T) string {
 	return db
 }
 
-// TestNativeDocuments запускает сценарии окна документов параллельно: у каждого свой процесс, дисплей Xvfb и база.
+// TestNativeDocuments запускает сценарии окон документов и отчёта параллельно: у каждого свой процесс, дисплей Xvfb и база.
 // Группа — один родительский тест, поэтому она не пересекается по времени с другими нативными тестами (одновременно
 // четыре Xvfb и четыре окна GTK однажды дали «gtk_init_check failed» у соседнего теста). Включается
 // ODDYNESS_NATIVE_UI=1, как TestNativeApp.
@@ -189,6 +193,7 @@ func TestNativeDocuments(t *testing.T) {
 	}
 	t.Run("receipt", func(t *testing.T) { t.Parallel(); nativeReceipt(t) })
 	t.Run("issue", func(t *testing.T) { t.Parallel(); nativeIssue(t) })
+	t.Run("report", func(t *testing.T) { t.Parallel(); nativeReport(t) })
 }
 
 // Сценарий окна поступлений (P16, часть 1): настоящее окно GTK под Xvfb, ввод — настоящие нажатия xdotool.
@@ -198,7 +203,7 @@ func TestNativeDocuments(t *testing.T) {
 // остаток 10.500. Порядок обхода Tab: поля шапки, поля строки, кнопки (таблицы стоят выше полей и в обход не входят).
 func nativeReceipt(t *testing.T) {
 	db := newBase(t)
-	runNativeDocuments(t, ":94", "receipt", db, func(w nativeDocs) {
+	runNativeWindow(t, ":94", "documents", "receipt", db, func(w nativeDocs) {
 		x, tabs := w.x, w.tabs
 		x.shot("documents-before")
 		// шапка: номер, дата, комментарий
@@ -264,7 +269,7 @@ func nativeIssue(t *testing.T) {
 	if code, _, errs := cli(t, "document", "post", configDir, db, "receipt", "1"); code != 0 {
 		t.Fatalf("post receipt: %d %q", code, errs)
 	}
-	runNativeDocuments(t, ":95", "issue", db, func(w nativeDocs) {
+	runNativeWindow(t, ":95", "documents", "issue", db, func(w nativeDocs) {
 		x, tabs := w.x, w.tabs
 		x.shot("issue-before")
 		// S10: две строки одного товара 5.000 + 4.000 при остатке 8.250
@@ -340,5 +345,70 @@ func nativeIssue(t *testing.T) {
 	}
 	if got := balanceOf(t, s, 1); got != "6.000" {
 		t.Errorf("balance = %s, want 6.000", got)
+	}
+}
+
+// Сценарий окна отчёта (P18, часть 2): настоящее окно GTK под Xvfb. База заранее содержит два товара, проведённое
+// поступление (1: 10.500, 2: 0.125) и проведённую выдачу 2.250 товара 1 (команды CLI). Таблицу результата нативно не
+// прочитать, поэтому окно печатает трассу команд (ODDYNESS_UI_TRACE=1): «Сформировать» без параметра — оба товара с
+// остатками 8.250 и 0.125 (S03); товар 2 — одна строка; неверный параметр — ошибка поля, окно открыто; параметр очищен — оба
+// товара снова. Порядок Tab: поле параметра, «Сформировать», «Закрыть».
+func nativeReport(t *testing.T) {
+	db := newBase(t)
+	if code, _, errs := cli(t, "catalog", "add", configDir, db, "goods", "Код=K-2", "Наименование=Труба", "ЕдиницаИзмерения=м", "Используется=true", "МинимальныйОстаток=0"); code != 0 {
+		t.Fatalf("seed second product: %d %q", code, errs)
+	}
+	for _, c := range [][]string{
+		{"document", "add", configDir, db, "receipt", "Номер=R-1", "Дата=2026-10-28", "Комментарий=x", "--row", "receipt-items", "Товар=1", "Количество=10.500", "--row", "receipt-items", "Товар=2", "Количество=0.125"},
+		{"document", "post", configDir, db, "receipt", "1"},
+		{"document", "add", configDir, db, "issue", "Номер=I-1", "Дата=2026-10-28", "Получатель=x", "--row", "issue-items", "Товар=1", "Количество=2.250"},
+		{"document", "post", configDir, db, "issue", "1"},
+	} {
+		if code, _, errs := cli(t, c...); code != 0 {
+			t.Fatalf("seed %v: %d %q", c[:2], code, errs)
+		}
+	}
+	trace := runNativeWindow(t, ":96", "report", "stock-report", db, func(w nativeDocs) {
+		x, tabs := w.x, w.tabs
+		x.shot("report-before")
+		// без параметра: Tab — «Сформировать»
+		tabs(1)
+		x.key("Return")
+		x.shot("report-all")
+		w.mustAlive("after the first run")
+		// фокус вернулся на параметр: товар 2
+		x.typeText("2")
+		tabs(1)
+		x.key("Return")
+		x.shot("report-filtered")
+		w.mustAlive("after filtering")
+		// неверный параметр (ввод заменяет выделенный текст или дописывается — в обоих случаях это не номер записи)
+		x.typeText("x")
+		tabs(1)
+		x.key("Return")
+		x.shot("report-invalid")
+		w.mustAlive("after an invalid parameter")
+		// очистить параметр и сформировать заново
+		x.key("ctrl+a", "BackSpace")
+		tabs(1)
+		x.key("Return")
+		x.shot("report-cleared")
+		w.mustAlive("after clearing the parameter")
+		// фокус на параметре: Tab×2 — «Закрыть»
+		tabs(2)
+		x.key("Return")
+	})
+	all, one := "rows=[[1 8.250] [2 0.125]]", "rows=[[2 0.125]]"
+	steps := []string{"run err=<nil>", all, "run err=<nil>", one, "run err=forms: the form has errors", "run err=<nil>", all}
+	pos := 0
+	for _, want := range steps {
+		i := strings.Index(trace[pos:], want)
+		if i < 0 {
+			t.Fatalf("the trace has no %q after offset %d:\n%s", want, pos, trace)
+		}
+		pos += i + len(want)
+	}
+	if n := strings.Count(trace, "report: run"); n != 4 {
+		t.Errorf("%d runs in the trace, want 4:\n%s", n, trace)
 	}
 }
