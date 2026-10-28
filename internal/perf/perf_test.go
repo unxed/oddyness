@@ -304,3 +304,67 @@ func TestNoRetainedGrowth(t *testing.T) {
 		t.Errorf("удерживаемая память выросла на %d КиБ за 300 повторов", growth/1024)
 	}
 }
+
+// mallocs возвращает среднее число выделений памяти на вызов fn за n вызовов (счётчик рантайма, не зависит от скорости
+// машины, поэтому бюджет по нему устойчив; время сравнивается с запасом на десятикратную разницу машин).
+func mallocs(n int, fn func(i int)) float64 {
+	runtime.GC()
+	var a, b runtime.MemStats
+	runtime.ReadMemStats(&a)
+	for i := 0; i < n; i++ {
+		fn(i)
+	}
+	runtime.ReadMemStats(&b)
+	return float64(b.Mallocs-a.Mallocs) / float64(n)
+}
+
+// Бюджеты: измерения прогона ci 40617697281 (ubuntu-latest, 4 vCPU, go1.26.0) — проведение поступления 20 строк
+// 1.5 мс и 967 выделений, выдачи 10 строк 4.7 мс и 7427, Balances и Query.Run по 100 товарам (6 000 движений) 7.5 мс и
+// около 75 300 выделений. Бюджет выделений — не более полутора измеренных; бюджет времени — на порядок больше измеренного.
+// Узкого места, требующего оптимизации, измерения не показали (docs/implementation/performance.md).
+func TestBudgets(t *testing.T) {
+	f := newFixture(t)
+	for d := 0; d < receiptsN; d++ {
+		f.add("receipt", d, true)
+	}
+	const n = 30
+	receipts := make([]int64, n)
+	issues := make([]int64, n)
+	for i := 0; i < n; i++ {
+		receipts[i] = f.add("receipt", 1000+i, false)
+		issues[i] = f.add("issue", i, false)
+	}
+	type budget struct {
+		name   string
+		allocs float64
+		perOp  time.Duration
+		run    func(i int)
+	}
+	q, err := query.Parse(stockQuery, f.model)
+	if err != nil {
+		t.Fatal(err)
+	}
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, b := range []budget{
+		{"Post receipt, 20 lines", 1500, 30 * time.Millisecond, func(i int) { must(f.pl.Post(ctx, "receipt", receipts[i])) }},
+		{"Post issue, 10 lines", 11000, 100 * time.Millisecond, func(i int) { must(f.pl.Post(ctx, "issue", issues[i])) }},
+		{"Balances, 100 products", 113000, 150 * time.Millisecond, func(int) { _, err := f.store.Balances(ctx, "stock", sqlite.BalanceQuery{}); must(err) }},
+		{"Query.Run, 100 products", 113000, 150 * time.Millisecond, func(int) { _, err := q.Run(ctx, f.store, nil); must(err) }},
+	} {
+		start := time.Now()
+		got := mallocs(n, b.run)
+		per := time.Since(start) / n
+		t.Logf("%s: %.0f allocs/op (budget %.0f), %v/op (budget %v)", b.name, got, b.allocs, per.Round(time.Microsecond), b.perOp)
+		if got > b.allocs {
+			t.Errorf("%s: %.0f allocations per operation, budget %.0f", b.name, got, b.allocs)
+		}
+		if per > b.perOp {
+			t.Errorf("%s: %v per operation, budget %v", b.name, per, b.perOp)
+		}
+	}
+}
