@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/unxed/goWidgets"
 
@@ -51,6 +52,9 @@ func runDocuments(args []string, stdout, stderr io.Writer) int {
 	docs, err := forms.NewDocuments(d, be)
 	if err != nil {
 		return fail(err)
+	}
+	if os.Getenv("ODDYNESS_UI_TRACE") == "1" {
+		ui.Trace = func(line string) { fmt.Fprintln(stderr, line) }
 	}
 	app, err := goWidgets.NewApp()
 	if err != nil {

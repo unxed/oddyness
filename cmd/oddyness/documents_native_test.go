@@ -55,7 +55,7 @@ func runNativeDocuments(t *testing.T, display, document, db string, script func(
 	}
 
 	app := proc(t, ctx, "cli", "documents", configDir, db, document)
-	app.Env = append(app.Env, "DISPLAY="+display, "goWidgets_BACKEND=gtk")
+	app.Env = append(app.Env, "DISPLAY="+display, "goWidgets_BACKEND=gtk", "ODDYNESS_UI_TRACE=1")
 	var out, errb bytes.Buffer
 	app.Stdout, app.Stderr = &out, &errb
 	if err := app.Start(); err != nil {
@@ -127,6 +127,7 @@ func runNativeDocuments(t *testing.T, display, document, db string, script func(
 	for alive() {
 		select {
 		case <-deadline:
+			x.shot("not-exited-" + document)
 			t.Fatalf("the application did not exit after Close\nstdout: %s\nstderr: %s", out.String(), errb.String())
 		case <-time.After(100 * time.Millisecond):
 		}
@@ -134,6 +135,7 @@ func runNativeDocuments(t *testing.T, display, document, db string, script func(
 	if waitErr != nil || out.String() != "" {
 		t.Fatalf("exit error=%v stdout=%q stderr=%q", waitErr, out.String(), errb.String())
 	}
+	t.Logf("trace:\n%s", errb.String())
 }
 
 // openStore открывает базу после выхода процесса (ошибка — база ещё занята или повреждена).
@@ -310,6 +312,7 @@ func TestNativeIssue(t *testing.T) {
 		x.typeText("other")
 		tabs(6)
 		x.key("Return")
+		time.Sleep(time.Second)
 		x.shot("issue-edit-posted")
 		w.mustAlive("after saving a posted document")
 		// фокус на номере: «Закрыть» — Tab×12

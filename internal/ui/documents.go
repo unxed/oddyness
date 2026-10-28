@@ -19,6 +19,10 @@ const (
 	BtnClose      = "close"
 )
 
+// Trace, если задана, получает строку о каждой выполненной команде окна документов (диагностика нативных сценариев:
+// команда и её результат попадают в stderr процесса; по умолчанию nil, ничего не печатается).
+var Trace func(string)
+
 // DocumentsView — окно документов одного вида: таблица документов, таблица строк выбранного документа, шапка и
 // карточка строки (две панели), команды. Сверху вниз: списки, затем поля (на пути Tab между полями и кнопками нет
 // таблиц), затем кнопки. Состояние и правила — в forms.Documents; окно только отражает их и пересылает команды.
@@ -120,7 +124,10 @@ func OpenDocuments(app *goWidgets.App, docs *forms.Documents, title string, onDo
 // виджеты: после команд, загружающих или очищающих форму. focusLine — фокус на карточку строки (команды строк),
 // иначе на шапку.
 func (dv *DocumentsView) command(run func() error, mirrorHead, mirrorLine, focusLine bool) {
-	_ = run()
+	err := run()
+	if Trace != nil {
+		Trace(fmt.Sprintf("documents: command done: err=%v posted=%v error=%q", err, dv.docs.Posted(), dv.docs.Error()))
+	}
 	dv.reloadTables()
 	if mirrorHead {
 		dv.head.mirror()
