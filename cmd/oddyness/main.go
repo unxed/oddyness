@@ -10,6 +10,7 @@ import (
 
 	"github.com/unxed/oddyness/internal/bsl"
 	"github.com/unxed/oddyness/internal/metadata"
+	"github.com/unxed/oddyness/internal/report"
 	"github.com/unxed/oddyness/internal/value"
 	"github.com/unxed/oddyness/internal/vm"
 )
@@ -191,6 +192,17 @@ func runConfig(args []string, stdout, stderr io.Writer) int {
 		}
 		for _, f := range r.Resources {
 			fmt.Fprintf(stdout, "  resource %s %s %s\n", f.ID, f.Name, f.TypeString())
+		}
+	}
+	for _, r := range m.Reports {
+		rep, err := report.Load(m, r.ID)
+		if err != nil {
+			fmt.Fprintf(stderr, "%v\n", err)
+			return 1
+		}
+		fmt.Fprintf(stdout, "report %s %q: %d parameters\n", r.ID, r.Name, len(rep.Params()))
+		for _, p := range rep.Params() {
+			fmt.Fprintf(stdout, "  parameter %s %s\n", p.Name, p.Type)
 		}
 	}
 	return 0

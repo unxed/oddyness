@@ -95,12 +95,22 @@ type Register struct {
 	Resources  []Field `json:"resources"`
 }
 
+// Report — декларативный отчёт по остаткам: текст запроса (internal/query) и имя. Параметры отчёта — параметры
+// запроса `&Имя`; форма отчёта строится из них. Текст запроса проверяет пакет report при открытии отчёта (метаданные
+// не знают языка запросов); здесь проверяются только идентификатор, имя и непустота запроса.
+type Report struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Query string `json:"query"`
+}
+
 // Model — загруженная модель.
 type Model struct {
 	Version   int        `json:"version"`
 	Catalogs  []Catalog  `json:"catalogs"`
 	Documents []Document `json:"documents,omitempty"`
 	Registers []Register `json:"registers,omitempty"`
+	Reports   []Report   `json:"reports,omitempty"`
 }
 
 // Error — диагностика загрузки: файл, позиция (если известна), путь внутри
@@ -405,6 +415,23 @@ func (m *Model) validate(fail failFunc) error {
 			if dimNames[strings.ToLower(f.Name)] {
 				return fail(-1, fmt.Sprintf("%s.resources[%d].name", rp, j), "resource name %q repeats a dimension name", f.Name)
 			}
+		}
+	}
+	reportNames := map[string]string{}
+	for i, r := range m.Reports {
+		rp := fmt.Sprintf("reports[%d]", i)
+		if err := checkID(rp, r.ID); err != nil {
+			return err
+		}
+		if r.Name == "" {
+			return fail(-1, rp+".name", "name is required")
+		}
+		if first, dup := reportNames[strings.ToLower(r.Name)]; dup {
+			return fail(-1, rp+".name", "duplicate report name %q (first used at %s)", r.Name, first)
+		}
+		reportNames[strings.ToLower(r.Name)] = rp
+		if strings.TrimSpace(r.Query) == "" {
+			return fail(-1, rp+".query", "query is required")
 		}
 	}
 	return nil
