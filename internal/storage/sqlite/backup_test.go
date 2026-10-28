@@ -133,7 +133,7 @@ func TestRestoreRefusals(t *testing.T) {
 	// копия другой конфигурации
 	other := *m
 	other.Catalogs = append([]metadata.Catalog(nil), m.Catalogs...)
-	other.Catalogs[0].Name = "Другое имя"
+	other.Catalogs[0].Fields = append([]metadata.Field(nil), other.Catalogs[0].Fields[1:]...) // удалено поле
 	out := filepath.Join(dir, "other.sqlite")
 	if err := Restore(ctx, good, out, &other); !errors.Is(err, ErrConfig) {
 		t.Errorf("other configuration: %v", err)
