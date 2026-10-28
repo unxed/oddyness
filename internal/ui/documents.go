@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/unxed/goWidgets"
 	"github.com/unxed/oddyness/internal/forms"
@@ -18,6 +19,10 @@ const (
 	BtnLineDelete = "line-delete" // удалить строку
 	BtnClose      = "close"
 )
+
+// Trace, если задана, получает строку о каждой выполненной команде окна документов (диагностика нативных сценариев:
+// команда и её результат попадают в stderr процесса; по умолчанию nil, ничего не печатается).
+var Trace func(string)
 
 // DocumentsView — окно документов одного вида: таблица документов, таблица строк выбранного документа, шапка и
 // карточка строки (две панели), команды. Сверху вниз: списки, затем поля (на пути Tab между полями и кнопками нет
@@ -120,7 +125,10 @@ func OpenDocuments(app *goWidgets.App, docs *forms.Documents, title string, onDo
 // виджеты: после команд, загружающих или очищающих форму. focusLine — фокус на карточку строки (команды строк),
 // иначе на шапку.
 func (dv *DocumentsView) command(run func() error, mirrorHead, mirrorLine, focusLine bool) {
-	_ = run()
+	err := run()
+	if Trace != nil {
+		Trace(fmt.Sprintf("documents: command done: err=%v posted=%v error=%q", err, dv.docs.Posted(), dv.docs.Error()))
+	}
 	dv.reloadTables()
 	if mirrorHead {
 		dv.head.mirror()
@@ -131,25 +139,40 @@ func (dv *DocumentsView) command(run func() error, mirrorHead, mirrorLine, focus
 	dv.show(true, focusLine)
 }
 
+// pickDocument и pickLine отражают выбор строки таблицы пользователем. Событие выбора, совпадающее с состоянием,
+// не команда: нативные backend сообщают и о программном выборе строки (и устаревшие сообщения приходят позже
+// нового выбора), а команда перерисовывала бы таблицы и порождала новые сообщения — так два документа в списке
+// переключали друг друга бесконечно (нативный сценарий нашёл именно это).
 func (dv *DocumentsView) pickDocument(i int) {
+	if cur, _ := dv.docs.Selected(); cur == i {
+		return
+	}
 	dv.command(func() error { return dv.docs.Select(i) }, true, true, false)
 }
 
 func (dv *DocumentsView) pickLine(i int) {
+	if dv.docs.SelectedLine() == i {
+		return
+	}
 	dv.command(func() error { return dv.docs.SelectLine(i) }, false, true, true)
 }
 
-// reloadTables показывает списки из состояния и выбирает текущие документ и строку.
+// reloadTables показывает списки из состояния и выбирает текущие документ и строку. Таблица меняется только если
+// изменилось содержимое или выбор: лишний SetRows сбрасывает выбор и порождает новые сообщения backend.
 func (dv *DocumentsView) reloadTables() {
-	dv.docTable.SetRows(dv.docs.Rows())
-	if i, _ := dv.docs.Selected(); i >= 0 {
-		dv.docTable.Select(i)
-	}
+	i, _ := dv.docs.Selected()
+	syncTable(dv.docTable, dv.docs.Rows(), i)
 	if dv.lineTable != nil {
-		dv.lineTable.SetRows(dv.docs.Lines())
-		if i := dv.docs.SelectedLine(); i >= 0 {
-			dv.lineTable.Select(i)
-		}
+		syncTable(dv.lineTable, dv.docs.Lines(), dv.docs.SelectedLine())
+	}
+}
+
+func syncTable(t *goWidgets.Table, rows [][]string, sel int) {
+	if !reflect.DeepEqual(t.Rows(), rows) {
+		t.SetRows(rows)
+	}
+	if t.SelectedIndex() != sel {
+		t.Select(sel)
 	}
 }
 
