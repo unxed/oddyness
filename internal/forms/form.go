@@ -63,6 +63,7 @@ type Form struct {
 	open     bool
 	save     SaveFunc
 	saved    map[string]any
+	keep     bool // успешное сохранение не закрывает форму (окно каталога)
 }
 
 // New создаёт открытую пустую форму; фокус на первом контроле.
@@ -219,7 +220,61 @@ func (f *Form) Save() error {
 		}
 	}
 	f.saved = values
-	f.open = false
+	if !f.keep {
+		f.open = false
+	}
+	return nil
+}
+
+// KeepOpen оставляет форму открытой после успешного сохранения: так работает карточка в окне каталога,
+// где после записи можно продолжить правку или выбрать другую запись.
+func (f *Form) KeepOpen(keep bool) { f.keep = keep }
+
+// Reset очищает форму для новой записи: тексты, флажки, ошибки; фокус на первом поле.
+func (f *Form) Reset() error { return f.Load(nil) }
+
+// Load заполняет форму значениями записи (string, bool, value.Number, value.Ref или nil; отсутствующее поле — пусто),
+// сбрасывает ошибки и ставит фокус на первое поле. Значение неподходящего типа — ошибка, форма не меняется.
+func (f *Form) Load(values map[string]any) error {
+	if !f.open {
+		return ErrClosed
+	}
+	texts, checks := map[string]string{}, map[string]bool{}
+	for _, ctl := range f.controls {
+		if ctl.Kind == Button {
+			continue
+		}
+		fld := f.fields[ctl.ID]
+		v, ok := values[fld.ID]
+		if !ok || v == nil {
+			continue
+		}
+		switch x := v.(type) {
+		case bool:
+			if ctl.Kind != CheckBox {
+				return fmt.Errorf("forms: field %q: unexpected bool", fld.ID)
+			}
+			checks[ctl.ID] = x
+		case string:
+			if ctl.Kind != Edit || fld.Type == metadata.TypeNumber || fld.Type == metadata.TypeRef {
+				return fmt.Errorf("forms: field %q: unexpected string", fld.ID)
+			}
+			texts[ctl.ID] = x
+		case value.Number:
+			if fld.Type != metadata.TypeNumber {
+				return fmt.Errorf("forms: field %q: unexpected number", fld.ID)
+			}
+			texts[ctl.ID] = x.String()
+		case value.Ref:
+			if fld.Type != metadata.TypeRef {
+				return fmt.Errorf("forms: field %q: unexpected reference", fld.ID)
+			}
+			texts[ctl.ID] = strconv.FormatInt(x.ID, 10)
+		default:
+			return fmt.Errorf("forms: field %q: unsupported value %T", fld.ID, v)
+		}
+	}
+	f.texts, f.checks, f.errs, f.formErr, f.focus = texts, checks, map[string]string{}, "", 0
 	return nil
 }
 

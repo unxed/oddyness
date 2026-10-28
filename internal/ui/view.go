@@ -23,6 +23,9 @@ type View struct {
 	onDone   func()
 	saveID   string // кнопки: первая — «Сохранить», вторая — «Закрыть»
 	closeID  string
+
+	syncing   bool   // значения виджетов выставляет программа, а не пользователь: форме их не пересылать
+	afterSave func() // вызывается после успешного «Сохранить» (окно каталога перечитывает список)
 }
 
 // Open создаёт окно для формы: подпись, поле или флажок и строка ошибки на
@@ -30,7 +33,12 @@ type View struct {
 // форма закрыта (успешным сохранением, кнопкой или крестиком); nil означает
 // app.Quit.
 func Open(app *goWidgets.App, form *forms.Form, title string, onDone func()) (*View, error) {
-	win, err := app.NewWindow(title, 420, 560)
+	return open(app, form, title, onDone, 420, 560, nil)
+}
+
+// open строит окно; before (если задан) добавляет виджеты над карточкой.
+func open(app *goWidgets.App, form *forms.Form, title string, onDone func(), w, h float64, before func(*View) error) (*View, error) {
+	win, err := app.NewWindow(title, w, h)
 	if err != nil {
 		return nil, err
 	}
@@ -44,6 +52,11 @@ func Open(app *goWidgets.App, form *forms.Form, title string, onDone func()) (*V
 		focusers: map[string]func(){}, onDone: onDone,
 	}
 	scope := app.Scope()
+	if before != nil {
+		if err := before(v); err != nil {
+			return nil, err
+		}
+	}
 	for _, c := range form.Controls() {
 		switch c.Kind {
 		case forms.Edit:
@@ -97,6 +110,9 @@ func Open(app *goWidgets.App, form *forms.Form, title string, onDone func()) (*V
 // input передаёт форме правку пользователя; ошибка команды (форма закрыта)
 // показывается в строке ошибки формы.
 func (v *View) input(cmd func() error) {
+	if v.syncing {
+		return
+	}
 	if err := cmd(); err != nil {
 		v.formErr.Text.Set(err.Error())
 		return
@@ -107,7 +123,9 @@ func (v *View) input(cmd func() error) {
 func (v *View) click(id string) {
 	switch id {
 	case v.saveID:
-		_ = v.form.Save() // результат виден через refresh: ошибки полей, ошибка формы, закрытие
+		if err := v.form.Save(); err == nil && v.afterSave != nil {
+			v.afterSave()
+		} // иначе результат виден через refresh: ошибки полей, ошибка формы, закрытие
 	case v.closeID:
 		v.form.Close()
 	}
