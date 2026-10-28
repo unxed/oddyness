@@ -69,7 +69,7 @@
 
 ### P06. Первый полезный GUI-срез: каталог товаров
 
-- Статус: в работе (PR и `ci` — после прогона; `forms.Catalog`, `ui.OpenCatalog`, `oddyness app`; `docs/implementation/forms.md`; команды `go test ./internal/forms ./internal/ui/catalogcheck` и `ODDYNESS_NATIVE_UI=1 go test -run TestNativeApp ./cmd/oddyness`). Зависимости: P04, P05.
+- Статус: сделано (PR https://github.com/unxed/oddyness/pull/23, `ci` https://github.com/unxed/oddyness/actions/runs/40609541534 на коммите `dafdf9250d4d9fccb526ef2cc042f01d7aa2f2d5`; S01: товар создаётся и сохраняется, пустое имя и дубликат кода показывают ошибки без изменения данных (headless и нативный GTK под Xvfb `TestNativeApp`), независимое чтение базы после выхода; не проверено: выбор строки в нативном окне, Qt/Win32/Cocoa; `forms.Catalog`, `ui.OpenCatalog`, `oddyness app`; `docs/implementation/forms.md`; команды `go test ./internal/forms ./internal/ui/catalogcheck` и `ODDYNESS_NATIVE_UI=1 go test -run TestNativeApp ./cmd/oddyness`). Зависимости: P04, P05.
 - Сделать: стандартный список и карточку на метаданных, сохранить через ядро,
   показать его ошибки; подготовить тестовый снимок конфигурации с лицензией.
 - Проверить: S01 через UI; пустое имя и дубликат кода; сохранение после перезапуска.
