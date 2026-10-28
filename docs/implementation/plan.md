@@ -69,7 +69,7 @@
 
 ### P06. Первый полезный GUI-срез: каталог товаров
 
-- Статус: planned. Зависимости: P04, P05.
+- Статус: в работе (PR и `ci` — после прогона; `forms.Catalog`, `ui.OpenCatalog`, `oddyness app`; `docs/implementation/forms.md`; команды `go test ./internal/forms ./internal/ui/catalogcheck` и `ODDYNESS_NATIVE_UI=1 go test -run TestNativeApp ./cmd/oddyness`). Зависимости: P04, P05.
 - Сделать: стандартный список и карточку на метаданных, сохранить через ядро,
   показать его ошибки; подготовить тестовый снимок конфигурации с лицензией.
 - Проверить: S01 через UI; пустое имя и дубликат кода; сохранение после перезапуска.
