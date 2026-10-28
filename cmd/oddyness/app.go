@@ -19,6 +19,9 @@ type storeBackend struct {
 	c *metadata.Catalog
 }
 
+// CanWrite сообщает, разрешена ли записи роль сессии (forms.WriteGate).
+func (b storeBackend) CanWrite() bool { return b.s.CanWrite() }
+
 func (b storeBackend) List() ([]forms.Row, error) {
 	recs, err := b.s.List(context.Background(), b.c.ID)
 	if err != nil {

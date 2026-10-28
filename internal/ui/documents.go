@@ -20,6 +20,9 @@ const (
 	BtnClose      = "close"
 )
 
+// ReadOnlyNotice — подпись окна, открытого под ролью чтения.
+const ReadOnlyNotice = "Режим чтения: запись недоступна"
+
 // Trace, если задана, получает строку о каждой выполненной команде окна документов (диагностика нативных сценариев:
 // команда и её результат попадают в stderr процесса; по умолчанию nil, ничего не печатается).
 var Trace func(string)
@@ -53,6 +56,11 @@ func OpenDocuments(app *goWidgets.App, docs *forms.Documents, title string, onDo
 	}
 	dv := &DocumentsView{app: app, win: win, docs: docs, buttons: map[string]*goWidgets.Button{}, onDone: onDone}
 	scope := app.Scope()
+	if docs.ReadOnly() {
+		if _, err := win.AddLabel(ReadOnlyNotice); err != nil {
+			return nil, err
+		}
+	}
 	table := func(cols []string) (*goWidgets.Table, error) {
 		tc := make([]goWidgets.TableColumn, len(cols))
 		for i, c := range cols {
@@ -109,6 +117,17 @@ func OpenDocuments(app *goWidgets.App, docs *forms.Documents, title string, onDo
 		}
 		if err := add(c.id, c.label, c.do); err != nil {
 			return nil, err
+		}
+	}
+	if docs.ReadOnly() {
+		// роль сессии не разрешает запись: поля и команды записи недоступны, чтение (выбор документа) работает;
+		// защитой служит ядро, команда мимо окна получит ErrDenied
+		dv.head.setEnabled(false)
+		if dv.line != nil {
+			dv.line.setEnabled(false)
+		}
+		for id, b := range dv.buttons {
+			b.Enabled.Set(id == BtnClose)
 		}
 	}
 	win.Closing.On(scope, func(*goWidgets.CloseRequest) {
@@ -187,7 +206,7 @@ func (dv *DocumentsView) show(moveFocus, focusLine bool) {
 		dv.onDone()
 		return
 	}
-	if !moveFocus {
+	if !moveFocus || dv.docs.ReadOnly() {
 		return
 	}
 	if focusLine && dv.line != nil {

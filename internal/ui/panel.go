@@ -109,6 +109,24 @@ func (p *panel) mirror() {
 	}
 }
 
+// setEnabled делает поля и кнопки панели доступными или нет. except — кнопки, которые остаются доступными
+// (идентификаторы контролов формы), например «Закрыть» окна справочника.
+func (p *panel) setEnabled(on bool, except ...string) {
+	keep := map[string]bool{}
+	for _, id := range except {
+		keep[id] = true
+	}
+	for id, e := range p.edits {
+		e.Enabled.Set(on || keep[id])
+	}
+	for id, c := range p.checks {
+		c.Enabled.Set(on || keep[id])
+	}
+	for id, b := range p.buttons {
+		b.Enabled.Set(on || keep[id])
+	}
+}
+
 // Edit, CheckBox, Button и ErrorLabel возвращают виджеты по идентификатору контрола формы (nil, если такого нет);
 // нужны тестам и прокликивающему harness.
 func (p *panel) Edit(id string) *goWidgets.Edit         { return p.edits[id] }
