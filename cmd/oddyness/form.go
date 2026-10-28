@@ -35,7 +35,7 @@ func runForm(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "oddyness: %v\n", err)
 		return 1
 	}
-	s, err := openStore(args[1], m)
+	s, err := openSession(args[1], m)
 	if err != nil {
 		fmt.Fprintf(stderr, "oddyness: %v\n", err)
 		return 1

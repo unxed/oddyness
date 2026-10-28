@@ -60,7 +60,7 @@ func runCatalog(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "oddyness: %v\n", err)
 		return 1
 	}
-	s, err := openStore(args[2], m)
+	s, err := openSession(args[2], m)
 	if err != nil {
 		fmt.Fprintf(stderr, "oddyness: %v\n", err)
 		return 1

@@ -13,8 +13,8 @@ import (
 // роль выбирает тот, кто запускает приложение.
 const RoleEnv = "ODDYNESS_ROLE"
 
-// openStore открывает базу и ставит роль сессии из RoleEnv. Неизвестное значение — ошибка до открытия базы.
-func openStore(path string, m *metadata.Model) (*sqlite.Store, error) {
+// openSession открывает базу и ставит роль сессии из RoleEnv. Неизвестное значение — ошибка до открытия базы.
+func openSession(path string, m *metadata.Model) (*sqlite.Store, error) {
 	role := sqlite.RoleOperator
 	if v := os.Getenv(RoleEnv); v != "" {
 		r, err := sqlite.ParseRole(v)

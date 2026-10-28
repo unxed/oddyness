@@ -35,7 +35,7 @@ func runRegister(args []string, stdout, stderr io.Writer) int {
 	if reg == nil {
 		return fail(fmt.Errorf("unknown register %q", args[3]))
 	}
-	s, err := openStore(args[2], m)
+	s, err := openSession(args[2], m)
 	if err != nil {
 		return fail(err)
 	}
