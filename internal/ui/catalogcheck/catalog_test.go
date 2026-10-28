@@ -114,7 +114,7 @@ func TestCatalogWindowHeadless(t *testing.T) {
 		t.Fatal("backend did not accept the row pick")
 	}
 	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) && view.Edit(code).Text.Get() != "K-1" {
+	for time.Now().Before(deadline) && !(view.Edit(code).Text.Get() == "K-1" && view.Edit(title).Text.Get() == "Кабель") {
 		app.PumpOnce()
 		time.Sleep(time.Millisecond)
 	}
