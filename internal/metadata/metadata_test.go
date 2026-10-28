@@ -302,7 +302,7 @@ func TestRegisterDiagnostics(t *testing.T) {
 }
 
 func TestUnpostingNeedsPosting(t *testing.T) {
-	const doc = `{"version":1,"catalogs":[],"documents":[{"id":"d","name":"Д","fields":[{"id":"f","name":"Ф","type":"string"}],%s}]}`
+	const doc = `{"version":1,"catalogs":[{"id":"c","name":"К","fields":[{"id":"cf","name":"КФ","type":"string"}]}],"documents":[{"id":"d","name":"Д","fields":[{"id":"f","name":"Ф","type":"string"}],%s}]}`
 	if _, err := Parse("m.json", []byte(strings.Replace(doc, "%s", `"unposting":{"file":"a.bsl","procedure":"П"}`, 1))); err == nil || !strings.Contains(err.Error(), "unposting handler but no posting handler") {
 		t.Errorf("unposting without posting: %v", err)
 	}
