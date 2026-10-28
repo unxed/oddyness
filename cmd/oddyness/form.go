@@ -14,7 +14,6 @@ import (
 
 	"github.com/unxed/oddyness/internal/forms"
 	"github.com/unxed/oddyness/internal/metadata"
-	"github.com/unxed/oddyness/internal/storage/sqlite"
 	"github.com/unxed/oddyness/internal/ui"
 )
 
@@ -36,7 +35,7 @@ func runForm(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "oddyness: %v\n", err)
 		return 1
 	}
-	s, err := sqlite.Open(args[1], m)
+	s, err := openSession(args[1], m)
 	if err != nil {
 		fmt.Fprintf(stderr, "oddyness: %v\n", err)
 		return 1

@@ -47,6 +47,9 @@ type Tx struct {
 
 // Tx выполняет f в одной транзакции: ошибка f откатывает всё сделанное через Tx.
 func (s *Store) Tx(ctx context.Context, f func(*Tx) error) error {
+	if err := s.requireWrite("transaction"); err != nil {
+		return err
+	}
 	return s.inTx(ctx, func(tx *sql.Tx) error { return f(&Tx{s: s, tx: tx, ctx: ctx}) })
 }
 
