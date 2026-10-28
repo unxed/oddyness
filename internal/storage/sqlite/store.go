@@ -30,6 +30,8 @@ import (
 const SchemaVersion = 1
 
 var (
+	// ErrPosted — документ проведён: его нельзя изменить или удалить, пока не отменено проведение.
+	ErrPosted = errors.New("sqlite: the document is posted")
 	// ErrLocked — база занята другой сессией.
 	ErrLocked = errors.New("sqlite: database is locked by another session")
 	// ErrVersion — версия схемы базы не совпадает с поддерживаемой.

@@ -26,6 +26,18 @@ import (
 // регистр оно попадает после успешного завершения обработчика, вместе со статусом.
 const MovementFunc = "Движение"
 
+// BalanceFunc — встроенная функция BSL: Остаток(Регистр, значения измерений по порядку описания) — число,
+// остаток единственного ресурса регистра на текущий момент внутри той же транзакции с учётом движений, уже
+// подготовленных этим обработчиком (поэтому строки одного товара суммируются сами).
+const BalanceFunc = "Остаток"
+
+// RejectFunc — встроенная функция BSL: Отказ(Сообщение) прекращает проведение с этим сообщением;
+// транзакция откатывается целиком.
+const RejectFunc = "Отказ"
+
+// ErrRejected — обработчик отказал в проведении вызовом Отказ.
+var ErrRejected = errors.New("platform: posting rejected")
+
 // ErrNoHandler — у вида документа нет обработчика проведения.
 var ErrNoHandler = errors.New("platform: the document kind has no posting handler")
 
@@ -47,7 +59,11 @@ type Platform struct {
 	opt      Options
 }
 
-var hostDecls = []vm.HostDecl{{Name: MovementFunc, MinArgs: 2, MaxArgs: -1}}
+var hostDecls = []vm.HostDecl{
+	{Name: MovementFunc, MinArgs: 2, MaxArgs: -1},
+	{Name: BalanceFunc, MinArgs: 1, MaxArgs: -1},
+	{Name: RejectFunc, MinArgs: 1, MaxArgs: 1},
+}
 
 // Open загружает и компилирует обработчики проведения из каталога конфигурации.
 // Ошибка файла (нет файла, разбор, компиляция, нет процедуры, не один параметр)
@@ -184,11 +200,24 @@ func fromValue(f metadata.Field, v vm.Value) (any, error) {
 
 // movementCollector принимает вызовы Движение и копит строки по регистрам.
 type movementCollector struct {
-	model *metadata.Model
-	rows  map[string][]map[string]any
+	model    *metadata.Model
+	tx       *sqlite.Tx
+	rows     map[string][]map[string]any
+	rejected string
+	rejects  bool
 }
 
 func (c *movementCollector) host(name string, args []vm.Value) (vm.Value, error) {
+	switch name {
+	case BalanceFunc:
+		return c.balance(args)
+	case RejectFunc:
+		if args[0].Kind() != vm.String {
+			return vm.Value{}, fmt.Errorf("the message must be a String, got %s", args[0].Kind())
+		}
+		c.rejected, c.rejects = args[0].StringValue(), true
+		return vm.Value{}, fmt.Errorf("rejected: %s", c.rejected)
+	}
 	if args[0].Kind() != vm.String {
 		return vm.Value{}, fmt.Errorf("the register must be a String (name or id), got %s", args[0].Kind())
 	}
@@ -220,6 +249,66 @@ func (c *movementCollector) host(name string, args []vm.Value) (vm.Value, error)
 	return vm.Value{}, nil
 }
 
+func (c *movementCollector) register(arg vm.Value) (*metadata.Register, error) {
+	if arg.Kind() != vm.String {
+		return nil, fmt.Errorf("the register must be a String (name or id), got %s", arg.Kind())
+	}
+	key := arg.StringValue()
+	for i := range c.model.Registers {
+		r := &c.model.Registers[i]
+		if r.ID == key || strings.EqualFold(r.Name, key) {
+			return r, nil
+		}
+	}
+	return nil, fmt.Errorf("unknown register %q", key)
+}
+
+// balance: остаток из хранилища (без движений самого документа — Post их предварительно снимает) плюс движения,
+// уже подготовленные обработчиком по тем же значениям измерений.
+func (c *movementCollector) balance(args []vm.Value) (vm.Value, error) {
+	reg, err := c.register(args[0])
+	if err != nil {
+		return vm.Value{}, err
+	}
+	if len(reg.Resources) != 1 {
+		return vm.Value{}, fmt.Errorf("register %q has %d resources: %s supports one", reg.Name, len(reg.Resources), BalanceFunc)
+	}
+	if len(args)-1 != len(reg.Dimensions) {
+		return vm.Value{}, fmt.Errorf("register %q takes %d dimension values, got %d", reg.Name, len(reg.Dimensions), len(args)-1)
+	}
+	filter := make(map[string]any, len(reg.Dimensions))
+	for i, f := range reg.Dimensions {
+		v, err := fromValue(f, args[i+1])
+		if err != nil {
+			return vm.Value{}, fmt.Errorf("argument %d (%s): %w", i+2, f.Name, err)
+		}
+		filter[f.ID] = v
+	}
+	res := reg.Resources[0].ID
+	sum := value.FromInt64(0)
+	bs, err := c.tx.Balances(reg.ID, sqlite.BalanceQuery{Filter: filter})
+	if err != nil {
+		return vm.Value{}, err
+	}
+	for _, b := range bs {
+		if sum, err = sum.Add(b.Resources[res]); err != nil {
+			return vm.Value{}, err
+		}
+	}
+	for _, row := range c.rows[reg.ID] {
+		match := true
+		for id, v := range filter {
+			match = match && row[id] == v
+		}
+		if match {
+			if sum, err = sum.Add(row[res].(value.Number)); err != nil {
+				return vm.Value{}, err
+			}
+		}
+	}
+	return vm.NumberValue(sum), nil
+}
+
 // Post проводит документ: выполняет обработчик из метаданных и в одной транзакции
 // заменяет движения документа во всех регистрах и ставит признак проведения.
 // Любая ошибка обработчика, проверки движений или записи откатывает всё. Повторное
@@ -245,8 +334,17 @@ func (p *Platform) Post(ctx context.Context, docID string, id int64) error {
 		if err != nil {
 			return err
 		}
-		col := &movementCollector{model: model, rows: map[string][]map[string]any{}}
+		// движения самого документа не должны влиять на проверку остатка при повторном проведении
+		for _, r := range model.Registers {
+			if err := tx.ReplaceMovements(r.ID, docID, id, nil); err != nil {
+				return err
+			}
+		}
+		col := &movementCollector{model: model, tx: tx, rows: map[string][]map[string]any{}}
 		_, err = h.prog.NewMachine().Call(ctx, h.entry, []vm.Value{row}, vm.Options{MaxSteps: p.opt.MaxSteps, Host: col.host})
+		if col.rejects {
+			return fmt.Errorf("%w: %s %d: %s", ErrRejected, docID, id, col.rejected)
+		}
 		if err != nil {
 			return fmt.Errorf("posting %s %d (%s): %w", docID, id, h.file, err)
 		}

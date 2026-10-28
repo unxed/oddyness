@@ -343,7 +343,7 @@ func TestPostAndBalanceCommands(t *testing.T) {
 		code int
 		msg  string
 	}{
-		"no handler":       {[]string{"document", "post", configDir, db, "issue", "1"}, 1, "no posting handler"},
+		"unknown kind":     {[]string{"document", "post", configDir, db, "nope", "1"}, 1, "unknown document"},
 		"unknown document": {[]string{"document", "post", configDir, db, "receipt", "99"}, 1, "record not found"},
 		"bad id":           {[]string{"document", "post", configDir, db, "receipt", "x"}, 1, `invalid id "x"`},
 		"unknown register": {[]string{"register", "balance", configDir, db, "нет"}, 1, `unknown register "нет"`},

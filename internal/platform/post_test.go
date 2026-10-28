@@ -95,7 +95,10 @@ func (e *env) platform(opt Options) *Platform {
 func (e *env) withHandler(src string, opt Options) (*Platform, error) {
 	e.t.Helper()
 	dir := e.t.TempDir()
-	if err := os.MkdirAll(filepath.Join(dir, "bsl"), 0o755); err != nil {
+	if err := os.CopyFS(dir, os.DirFS(smallStock)); err != nil {
+		e.t.Fatal(err)
+	}
+	if err := os.Chmod(filepath.Join(dir, "bsl", "receipt-posting.bsl"), 0o600); err != nil {
 		e.t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "bsl", "receipt-posting.bsl"), []byte(src), 0o600); err != nil {
@@ -326,9 +329,6 @@ func TestHandlerLoadErrors(t *testing.T) {
 func TestPostChecks(t *testing.T) {
 	e := newEnv(t)
 	pl := e.platform(Options{})
-	if err := pl.Post(ctx, "issue", 1); !errors.Is(err, ErrNoHandler) {
-		t.Errorf("document kind without a handler: %v", err)
-	}
 	if err := pl.Post(ctx, "nope", 1); !errors.Is(err, ErrNoHandler) {
 		t.Errorf("unknown document kind: %v", err)
 	}
