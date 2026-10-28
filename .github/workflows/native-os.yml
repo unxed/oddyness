@@ -21,7 +21,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - name: Vet and tests on Windows (serial: GUI packages share desktop state)
+      - name: Vet and tests on Windows (serial, GUI packages share desktop state)
         run: |
           go vet ./...
           go test -p 1 -count=1 ./...
