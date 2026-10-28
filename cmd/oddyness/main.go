@@ -34,6 +34,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runRegister(args[1:], stdout, stderr)
 	}
 
+	if len(args) > 0 && args[0] == "query" {
+		return runQuery(args[1:], stdout, stderr)
+	}
+
 	if len(args) > 0 && args[0] == "document" {
 		return runDocument(args[1:], stdout, stderr)
 	}
