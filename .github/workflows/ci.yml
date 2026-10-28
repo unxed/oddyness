@@ -31,11 +31,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libgtk-3-0 xvfb xdotool scrot
-      - name: Native GTK form and catalog window scenarios (real window, real keystrokes, two parallel processes)
+      - name: Native GTK form, catalog and documents window scenarios (real window, real keystrokes, separate processes)
         env:
           ODDYNESS_NATIVE_UI: "1"
           ODDYNESS_ARTIFACT_DIR: ${{ runner.temp }}/native-shots
-        run: go test -count=1 -v -run 'TestNativeForm|TestNativeApp' ./cmd/oddyness
+        run: go test -count=1 -v -run 'TestNativeForm|TestNativeApp|TestNativeDocuments' ./cmd/oddyness
       - name: goWidgets native table on GTK at the pinned revision (upstream test, real GTK under Xvfb)
         run: |
           xvfb-run -a go test -count=1 -v github.com/unxed/goWidgets/backends/gtk/tabletest | tee "$RUNNER_TEMP/tabletest.log"

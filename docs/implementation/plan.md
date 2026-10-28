@@ -170,7 +170,7 @@
 
 ### P16. Документы в GUI
 
-- Статус: planned. Зависимости: P06, P14, P15.
+- Статус: часть 1 из 2 сделана — поступление (PR https://github.com/unxed/oddyness/pull/25, `ci` https://github.com/unxed/oddyness/actions/runs/40611399026 (номер 95) на коммите `bc3c242b310e58e0792a2d85bffb58793e6f632f`; `forms.Documents`, `ui.OpenDocuments` на вынесенной панели виджетов, `oddyness documents`, `formsbackend.Documents`; S02-S07, S09, S10, S12 через команды форм на настоящем ядре, окно на headless-backend (`internal/ui/documentscheck`), нативный GTK под Xvfb `TestNativeDocuments`: пустой товар оставляет окно с ошибкой, строка, сохранить, провести, закрыть, состояние читается из базы; `docs/implementation/forms.md`; команды `go test ./internal/forms ./internal/ui/documentscheck` и `ODDYNESS_NATIVE_UI=1 go test -run TestNativeDocuments ./cmd/oddyness`). Не сделано: часть 2 — выдача через форму в нативном окне (S04, S10, S12), затем карточка завершена. Зависимости: P06, P14, P15.
 - Сделать: сгенерированный список документов, строки Table; добавление/правка
   строки отдельной карточкой; команды сохранить/провести/отменить и ошибки ядра.
 - Проверить: S02–S10, S12 через форму; headless плюс реальные действия на

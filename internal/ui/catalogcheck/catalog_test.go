@@ -119,7 +119,7 @@ func TestCatalogWindowHeadless(t *testing.T) {
 		time.Sleep(time.Millisecond)
 	}
 	if view.Edit(code).Text.Get() != "K-1" || view.Edit(title).Text.Get() != "Кабель" || !view.CheckBox("goods/f/goods-active").Checked.Get() {
-		t.Fatalf("card after the pick: code=%q title=%q", view.Edit(code).Text.Get(), view.Edit(title).Text.Get())
+		t.Fatalf("card after the pick: code=%q title=%q formError=%q selected=%d table selected=%d form code=%q", view.Edit(code).Text.Get(), view.Edit(title).Text.Get(), view.FormErrorLabel().Text.Get(), func() int { i, _ := cat.Selected(); return i }(), view.Table().SelectedIndex(), cat.Card().Text(code))
 	}
 	typeIn(title, "Кабель ВВГ")
 	save()

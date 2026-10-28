@@ -51,7 +51,7 @@ type SaveFunc func(values map[string]any) error
 
 // Form — состояние формы одного справочника.
 type Form struct {
-	catalog  *metadata.Catalog
+	id, name string
 	controls []Control
 	index    map[string]int
 	fields   map[string]metadata.Field
@@ -66,10 +66,22 @@ type Form struct {
 	keep     bool // успешное сохранение не закрывает форму (окно каталога)
 }
 
-// New создаёт открытую пустую форму; фокус на первом контроле.
+// New создаёт открытую пустую форму справочника; фокус на первом контроле. После полей идут кнопки «Сохранить» и
+// «Закрыть».
 func New(c *metadata.Catalog, save SaveFunc) *Form {
+	return newForm(c.ID, c.Name, c.Fields, save, true)
+}
+
+// NewFields создаёт форму без кнопок из произвольного набора полей (шапка и строка документа): команды Save и Close
+// вызывает владелец формы (forms.Documents), а не кнопки. id попадает в идентификаторы контролов
+// `<id>/f/<поле>`. Набор полей не должен быть пустым.
+func NewFields(id, name string, fields []metadata.Field, save SaveFunc) *Form {
+	return newForm(id, name, fields, save, false)
+}
+
+func newForm(id, name string, fields []metadata.Field, save SaveFunc, buttons bool) *Form {
 	f := &Form{
-		catalog: c, index: map[string]int{}, fields: map[string]metadata.Field{},
+		id: id, name: name, index: map[string]int{}, fields: map[string]metadata.Field{},
 		texts: map[string]string{}, checks: map[string]bool{}, errs: map[string]string{},
 		open: true, save: save,
 	}
@@ -77,17 +89,19 @@ func New(c *metadata.Catalog, save SaveFunc) *Form {
 		f.index[ctl.ID] = len(f.controls)
 		f.controls = append(f.controls, ctl)
 	}
-	for _, fld := range c.Fields {
+	for _, fld := range fields {
 		kind := Edit
 		if fld.Type == metadata.TypeBoolean {
 			kind = CheckBox
 		}
-		id := FieldControlID(c.ID, fld.ID)
-		f.fields[id] = fld
-		add(Control{ID: id, Kind: kind, Label: fld.Name, Field: fld.ID})
+		cid := FieldControlID(id, fld.ID)
+		f.fields[cid] = fld
+		add(Control{ID: cid, Kind: kind, Label: fld.Name, Field: fld.ID})
 	}
-	add(Control{ID: ButtonControlID(c.ID, "save"), Kind: Button, Label: "Сохранить"})
-	add(Control{ID: ButtonControlID(c.ID, "close"), Kind: Button, Label: "Закрыть"})
+	if buttons {
+		add(Control{ID: ButtonControlID(id, "save"), Kind: Button, Label: "Сохранить"})
+		add(Control{ID: ButtonControlID(id, "close"), Kind: Button, Label: "Закрыть"})
+	}
 	return f
 }
 
@@ -152,8 +166,16 @@ func (f *Form) Error(id string) string { return f.errs[id] }
 // FormError возвращает ошибку сохранения, не относящуюся к одному полю.
 func (f *Form) FormError() string { return f.formErr }
 
+// SetFormError ставит ошибку формы, не относящуюся к одному полю (ошибка команды владельца формы); "" снимает её.
+func (f *Form) SetFormError(msg string) { f.formErr = msg }
+
 // Focused возвращает идентификатор контрола в фокусе.
-func (f *Form) Focused() string { return f.controls[f.focus].ID }
+func (f *Form) Focused() string {
+	if len(f.controls) == 0 {
+		return ""
+	}
+	return f.controls[f.focus].ID
+}
 
 // Focus переводит фокус на контрол.
 func (f *Form) Focus(id string) error {
@@ -171,6 +193,9 @@ func (f *Form) FocusPrev() error { return f.step(-1) }
 func (f *Form) step(d int) error {
 	if !f.open {
 		return ErrClosed
+	}
+	if len(f.controls) == 0 {
+		return nil
 	}
 	f.focus = (f.focus + d + len(f.controls)) % len(f.controls)
 	return nil
@@ -320,7 +345,7 @@ func (f *Form) Snapshot() string {
 	if !f.open {
 		state = "closed"
 	}
-	fmt.Fprintf(&sb, "form %s %q [%s]\n", f.catalog.ID, f.catalog.Name, state)
+	fmt.Fprintf(&sb, "form %s %q [%s]\n", f.id, f.name, state)
 	for i, c := range f.controls {
 		mark := ' '
 		if i == f.focus {

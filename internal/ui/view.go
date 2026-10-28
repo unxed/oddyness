@@ -11,20 +11,13 @@ import (
 
 // View — окно формы справочника.
 type View struct {
-	app      *goWidgets.App
-	win      *goWidgets.Window
-	form     *forms.Form
-	edits    map[string]*goWidgets.Edit
-	checks   map[string]*goWidgets.CheckBox
-	buttons  map[string]*goWidgets.Button
-	errors   map[string]*goWidgets.Label
-	formErr  *goWidgets.Label
-	focusers map[string]func()
-	onDone   func()
-	saveID   string // кнопки: первая — «Сохранить», вторая — «Закрыть»
-	closeID  string
+	*panel
+	app     *goWidgets.App
+	win     *goWidgets.Window
+	onDone  func()
+	saveID  string // кнопки: первая — «Сохранить», вторая — «Закрыть»
+	closeID string
 
-	syncing   bool   // значения виджетов выставляет программа, а не пользователь: форме их не пересылать
 	afterSave func() // вызывается после успешного «Сохранить» (окно каталога перечитывает список)
 }
 
@@ -45,79 +38,30 @@ func open(app *goWidgets.App, form *forms.Form, title string, onDone func(), w, 
 	if onDone == nil {
 		onDone = app.Quit
 	}
-	v := &View{
-		app: app, win: win, form: form,
-		edits: map[string]*goWidgets.Edit{}, checks: map[string]*goWidgets.CheckBox{},
-		buttons: map[string]*goWidgets.Button{}, errors: map[string]*goWidgets.Label{},
-		focusers: map[string]func(){}, onDone: onDone,
+	v := &View{app: app, win: win, onDone: onDone}
+	for _, c := range form.Controls() {
+		if c.Kind == forms.Button {
+			if v.saveID == "" {
+				v.saveID = c.ID
+			} else {
+				v.closeID = c.ID
+			}
+		}
 	}
-	scope := app.Scope()
 	if before != nil {
 		if err := before(v); err != nil {
 			return nil, err
 		}
 	}
-	for _, c := range form.Controls() {
-		switch c.Kind {
-		case forms.Edit:
-			if _, err := win.AddLabel(c.Label); err != nil {
-				return nil, err
-			}
-			e, err := win.AddEdit(form.Text(c.ID))
-			if err != nil {
-				return nil, err
-			}
-			id := c.ID
-			e.Text.OnChange(scope, func(s, _ string) { v.input(func() error { return form.SetText(id, s) }) })
-			v.edits[id], v.focusers[id] = e, e.Focus
-			if v.errors[id], err = win.AddLabel(""); err != nil {
-				return nil, err
-			}
-		case forms.CheckBox:
-			cb, err := win.AddCheckBox(c.Label, form.Checked(c.ID))
-			if err != nil {
-				return nil, err
-			}
-			id := c.ID
-			cb.Checked.OnChange(scope, func(on, _ bool) { v.input(func() error { return form.SetChecked(id, on) }) })
-			v.checks[id], v.focusers[id] = cb, cb.Focus
-		case forms.Button:
-			b, err := win.AddButton(c.Label)
-			if err != nil {
-				return nil, err
-			}
-			id := c.ID
-			b.Clicked.On(scope, func(goWidgets.ClickInfo) { v.click(id) })
-			v.buttons[id], v.focusers[id] = b, b.Focus
-			if v.saveID == "" {
-				v.saveID = id
-			} else {
-				v.closeID = id
-			}
-		}
-	}
-	if v.formErr, err = win.AddLabel(""); err != nil {
+	if v.panel, err = newPanel(app, win, form, v.click, func() { v.refresh(false) }); err != nil {
 		return nil, err
 	}
-	win.Closing.On(scope, func(*goWidgets.CloseRequest) {
+	win.Closing.On(app.Scope(), func(*goWidgets.CloseRequest) {
 		form.Close()
 		v.refresh(false)
 	})
 	v.refresh(true)
 	return v, nil
-}
-
-// input передаёт форме правку пользователя; ошибка команды (форма закрыта)
-// показывается в строке ошибки формы.
-func (v *View) input(cmd func() error) {
-	if v.syncing {
-		return
-	}
-	if err := cmd(); err != nil {
-		v.formErr.Text.Set(err.Error())
-		return
-	}
-	v.refresh(false)
 }
 
 func (v *View) click(id string) {
@@ -137,13 +81,10 @@ func (v *View) click(id string) {
 // форма не знает, куда пользователь перешёл Tab-ом, и отражение ввода не должно
 // возвращать фокус на прежний контрол (нативный сценарий нашёл именно эту ошибку).
 func (v *View) refresh(moveFocus bool) {
-	for id, l := range v.errors {
-		l.Text.Set(v.form.Error(id))
-	}
-	v.formErr.Text.Set(v.form.FormError())
+	v.labels()
 	if v.form.IsOpen() {
-		if f := v.focusers[v.form.Focused()]; f != nil && moveFocus {
-			f()
+		if moveFocus {
+			v.focus()
 		}
 		return
 	}
@@ -152,13 +93,3 @@ func (v *View) refresh(moveFocus bool) {
 
 // Window возвращает окно goWidgets.
 func (v *View) Window() *goWidgets.Window { return v.win }
-
-// Edit, CheckBox, Button и ErrorLabel возвращают виджеты по идентификатору
-// контрола формы (nil, если такого нет); нужны тестам и прокликивающему harness.
-func (v *View) Edit(id string) *goWidgets.Edit         { return v.edits[id] }
-func (v *View) CheckBox(id string) *goWidgets.CheckBox { return v.checks[id] }
-func (v *View) Button(id string) *goWidgets.Button     { return v.buttons[id] }
-func (v *View) ErrorLabel(id string) *goWidgets.Label  { return v.errors[id] }
-
-// FormErrorLabel возвращает строку ошибки формы.
-func (v *View) FormErrorLabel() *goWidgets.Label { return v.formErr }
