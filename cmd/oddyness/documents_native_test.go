@@ -57,17 +57,29 @@ func runNativeWindow(t *testing.T, display, command, object, db string, script f
 		t.Fatalf("Xvfb did not start: %s", xvfbLog.String())
 	}
 
-	app := proc(t, ctx, "cli", command, configDir, db, object)
-	app.Env = append(app.Env, "DISPLAY="+display, "goWidgets_BACKEND=gtk", "ODDYNESS_UI_TRACE=1")
-	var out, errb bytes.Buffer
-	app.Stdout, app.Stderr = &out, &errb
-	if err := app.Start(); err != nil {
-		t.Fatal(err)
+	var (
+		app      *exec.Cmd
+		out      bytes.Buffer
+		errb     bytes.Buffer
+		exited   chan error
+		waitErr  error
+		finished bool
+	)
+	launch := func() {
+		app = proc(t, ctx, "cli", command, configDir, db, object)
+		app.Env = append(app.Env, "DISPLAY="+display, "goWidgets_BACKEND=gtk", "ODDYNESS_UI_TRACE=1")
+		out.Reset()
+		errb.Reset()
+		app.Stdout, app.Stderr = &out, &errb
+		if err := app.Start(); err != nil {
+			t.Fatal(err)
+		}
+		exited = make(chan error, 1)
+		finished = false
+		cmd := app
+		go func() { exited <- cmd.Wait() }()
 	}
-	exited := make(chan error, 1)
-	go func() { exited <- app.Wait() }()
-	var waitErr error
-	finished := false
+	launch()
 	alive := func() bool {
 		if finished {
 			return false
@@ -91,9 +103,18 @@ func runNativeWindow(t *testing.T, display, command, object, db string, script f
 	}
 
 	var window string
+	starts := 1
 	title := "^oddyness " + command + " " + object + "$"
 	for i := 0; i < 300 && window == ""; i++ {
 		if !alive() {
+			// Xvfb уже отвечает xdotool, а gtk_init_check иногда ещё не проходит (гонка запуска при нескольких Xvfb):
+			// только этот отказ повторяем, любая другая причина выхода — ошибка
+			if starts < 4 && strings.Contains(errb.String(), "gtk_init_check failed") {
+				starts++
+				time.Sleep(500 * time.Millisecond)
+				launch()
+				continue
+			}
 			t.Fatalf("the application exited before showing a window: %s", exitInfo())
 		}
 		probe := exec.Command("xdotool", "search", "--onlyvisible", "--name", title)
