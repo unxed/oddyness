@@ -233,7 +233,7 @@
 
 ### P22. Корпус совместимости и честная матрица
 
-- Статус: planned. Зависимости: P17, P19.
+- Статус: сделано (PR https://github.com/unxed/oddyness/pull/34, `ci` https://github.com/unxed/oddyness/actions/runs/40617241230 на коммите `d8c411c978d9c9c076e1c8903dbf6f2a5b5d7b83`; 32 пробы `testdata/corpus/cases.json` (LANG, NUM, VAL, COL, OBJ, REG, TX, QRY, SEC; источник и версия хранятся в пробе отдельно), матрица `docs/implementation/compat-matrix.md` с 36 опытами исследования, сверяется с корпусом тестом; оригинал не запускался: у всех опытов «не проверено (оригинала нет)», подтверждённой совместимости нет; команда `go test -run 'TestCorpusProbes|TestCompatMatrixMatchesCorpus' ./cmd/oddyness`). Не сделано: сравнение с оригиналом (стенда нет), пробы FORM/MD/RPT/PRINT/FMT/INT. Зависимости: P17, P19.
 - Сделать: перенести реализованные LANG/NUM/OBJ/REG/TX/QRY/FORM случаи исследования
   в воспроизводимые короткие пробы; хранить источник ожидания и версию отдельно.
 - Проверить: запуск корпуса на oddyness; при доступном разрешённом стенде оригинала
