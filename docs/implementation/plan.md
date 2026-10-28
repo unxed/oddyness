@@ -244,7 +244,7 @@
 
 ### P23. Полная проверка нативных платформ
 
-- Статус: planned. Зависимости: P18, P19, P21.
+- Статус: сделано с ограничениями (PR https://github.com/unxed/oddyness/pull/36; `native-os` https://github.com/unxed/oddyness/actions/runs/40619384073 и `ci` https://github.com/unxed/oddyness/actions/runs/40619384018 на коммите `8a83b9fa3ed65aa0a60718ad98c38ca724ac77bf`; Linux GTK под Xvfb с клавишами — `TestNativeDocuments` (поступление, выдача, отчёт), `TestNativeApp`, `TestNativeForm`; Windows Win32: все тесты и сценарий окна поступлений с настоящими нажатиями (`SendKeys`), документ проведён, остаток 10.500; macOS Cocoa: все тесты, окно показано и снято, ввода нет (нет Accessibility); логи и снимки — артефакты; перечень ОС, backend, ревизий и команд — `docs/implementation/native-platforms.md`). Не проверено и остаётся ограничением: Qt, ввод кириллицы, мышь, сценарии выдачи/отмены/роли в окне на Windows и macOS, ввод на macOS. Зависимости: P18, P19, P21.
 - Сделать: довести требуемые контролы backend отдельными изменениями upstream;
   CI-сборки без CGO и реальные UI-сценарии Linux, Windows, macOS.
 - Проверить: S01–S12, фокус/клавиатуру/закрытие, сохранение; независимые сценарии
