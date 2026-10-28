@@ -83,7 +83,9 @@ func TestConfigCheck(t *testing.T) {
 		"    issue-qty Количество number(15,3)\n" +
 		"register stock \"Запасы\": 1 dimensions, 1 resources\n" +
 		"  dimension stock-product Товар ref(goods)\n" +
-		"  resource stock-qty Количество number(15,3)\n"
+		"  resource stock-qty Количество number(15,3)\n" +
+		"report stock-report \"Остатки\": 1 parameters\n" +
+		"  parameter Товар ref(goods)\n"
 	if stdout.String() != want {
 		t.Errorf("stdout = %q, want %q", stdout.String(), want)
 	}

@@ -109,6 +109,15 @@ func TestCatalogWindowHeadless(t *testing.T) {
 	if len(be.rows) != 2 || len(view.Table().Rows()) != 2 || view.FormErrorLabel().Text.Get() != "" {
 		t.Fatalf("rows=%d table=%v label=%q", len(be.rows), view.Table().Rows(), view.FormErrorLabel().Text.Get())
 	}
+	// headless-backend повторяет каждую программную запись текста и выбор строки таблицы сообщением (так делают и
+	// настоящие платформы, но синхронно), и эти сообщения ждут в очереди до первого PumpOnce. Выбор пользователя
+	// должен прийти в тихую очередь: иначе устаревшие сообщения программных записей приходят вперемешку с ним, форма
+	// получает чужие тексты, и тест краснеет случайно (дважды наблюдалось).
+	drain := func() {
+		for i := 0; i < 1000 && app.PumpOnce(); i++ {
+		}
+	}
+	drain()
 	// пользователь выбирает первую строку: карточка загружает «Кабель», правка обновляет запись
 	if !headless.PickTableRow(0) {
 		t.Fatal("backend did not accept the row pick")
@@ -118,6 +127,7 @@ func TestCatalogWindowHeadless(t *testing.T) {
 		app.PumpOnce()
 		time.Sleep(time.Millisecond)
 	}
+	drain()
 	if view.Edit(code).Text.Get() != "K-1" || view.Edit(title).Text.Get() != "Кабель" || !view.CheckBox("goods/f/goods-active").Checked.Get() {
 		t.Fatalf("card after the pick: code=%q title=%q formError=%q selected=%d table selected=%d form code=%q", view.Edit(code).Text.Get(), view.Edit(title).Text.Get(), view.FormErrorLabel().Text.Get(), func() int { i, _ := cat.Selected(); return i }(), view.Table().SelectedIndex(), cat.Card().Text(code))
 	}

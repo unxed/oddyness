@@ -313,3 +313,31 @@ func TestUnpostingNeedsPosting(t *testing.T) {
 		t.Errorf("valid unposting: %v", err)
 	}
 }
+
+func TestReports(t *testing.T) {
+	const base = `{"version":1,"catalogs":[{"id":"c","name":"К","fields":[{"id":"cf","name":"КФ","type":"string"}]}],"reports":[%s]}`
+	with := func(reports string) string { return strings.Replace(base, "%s", reports, 1) }
+	ok := `{"id":"r1","name":"Остатки","query":"ВЫБРАТЬ Товар ИЗ РегистрНакопления.Запасы.Остатки"}`
+	m, err := Parse("m.json", []byte(with(ok)))
+	if err != nil || len(m.Reports) != 1 || m.Reports[0].ID != "r1" || m.Reports[0].Name != "Остатки" || !strings.HasPrefix(m.Reports[0].Query, "ВЫБРАТЬ") {
+		t.Fatalf("valid report: %v %+v", err, m)
+	}
+	cases := []struct{ name, src, path, msg string }{
+		{"empty name", with(`{"id":"r1","name":"","query":"q"}`), "reports[0].name", "name is required"},
+		{"empty query", with(`{"id":"r1","name":"О","query":"  "}`), "reports[0].query", "query is required"},
+		{"missing query", with(`{"id":"r1","name":"О"}`), "reports[0].query", "query is required"},
+		{"duplicate id", with(`{"id":"c","name":"О","query":"q"}`), "reports[0].id", `duplicate id "c"`},
+		{"duplicate name", with(ok + `,{"id":"r2","name":"остатки","query":"q"}`), "reports[1].name", "duplicate report name"},
+		{"bad id", with(`{"id":"1x","name":"О","query":"q"}`), "reports[0].id", "invalid id"},
+	}
+	for _, c := range cases {
+		_, err := Parse("m.json", []byte(c.src))
+		var e *Error
+		if !errors.As(err, &e) || e.Path != c.path || !strings.Contains(e.Msg, c.msg) {
+			t.Errorf("%s: got %v; want path %q containing %q", c.name, err, c.path, c.msg)
+		}
+	}
+	if _, err := Parse("m.json", []byte(with(`{"id":"r1","name":"О","query":"q","title":"x"}`))); err == nil || !strings.Contains(err.Error(), "unknown field") {
+		t.Errorf("unknown report field: %v", err)
+	}
+}
