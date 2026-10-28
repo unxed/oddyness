@@ -149,7 +149,7 @@
 
 ### P14. Отмена проведения
 
-- Статус: в работе (PR и `ci` — после прогона; `Platform.Unpost`, обработчик отмены `unposting`, `document unpost`; `docs/implementation/posting.md`; команда `go test ./internal/platform ./internal/metadata ./cmd/oddyness`). Зависимости: P13.
+- Статус: сделано (PR https://github.com/unxed/oddyness/pull/22, `ci` https://github.com/unxed/oddyness/actions/runs/40608611774 на коммите `2a1e508a9a9b84efce7bd66f41ef5de1d302fbbb`; проверено S06 (с перезапуском), S07, повтор отмены, откат по ошибке обработчика; `Platform.Unpost`, обработчик отмены `unposting`, `document unpost`; `docs/implementation/posting.md`; команда `go test ./internal/platform ./internal/metadata ./cmd/oddyness`). Зависимости: P13.
 - Сделать: отдельную атомарную операцию с обработчиком/проверкой прикладных
   ограничений; после отмены разрешить редактирование черновика.
 - Проверить: S06, S07, повтор отмены, ошибка обработчика и перезапуск;
