@@ -38,6 +38,9 @@ const RejectFunc = "Отказ"
 // ErrRejected — обработчик отказал в проведении вызовом Отказ.
 var ErrRejected = errors.New("platform: posting rejected")
 
+// ErrNotPosted — отмена проведения документа, который не проведён.
+var ErrNotPosted = errors.New("platform: the document is not posted")
+
 // ErrNoHandler — у вида документа нет обработчика проведения.
 var ErrNoHandler = errors.New("platform: the document kind has no posting handler")
 
@@ -56,6 +59,7 @@ type handler struct {
 type Platform struct {
 	store    *sqlite.Store
 	handlers map[string]*handler // id вида документа -> обработчик проведения
+	cancels  map[string]*handler // id вида документа -> обработчик отмены проведения (необязателен)
 	opt      Options
 }
 
@@ -69,7 +73,7 @@ var hostDecls = []vm.HostDecl{
 // Ошибка файла (нет файла, разбор, компиляция, нет процедуры, не один параметр)
 // называет файл и позицию: платформа не открывается с неисправным обработчиком.
 func Open(store *sqlite.Store, configDir string, opt Options) (*Platform, error) {
-	p := &Platform{store: store, handlers: map[string]*handler{}, opt: opt}
+	p := &Platform{store: store, handlers: map[string]*handler{}, cancels: map[string]*handler{}, opt: opt}
 	for _, d := range store.Model().Documents {
 		if d.Posting == nil {
 			continue
@@ -79,6 +83,13 @@ func Open(store *sqlite.Store, configDir string, opt Options) (*Platform, error)
 			return nil, fmt.Errorf("document %q: %w", d.ID, err)
 		}
 		p.handlers[d.ID] = h
+		if d.Unposting != nil {
+			u, err := loadHandler(configDir, d.Unposting)
+			if err != nil {
+				return nil, fmt.Errorf("document %q unposting: %w", d.ID, err)
+			}
+			p.cancels[d.ID] = u
+		}
 	}
 	return p, nil
 }
@@ -205,6 +216,7 @@ type movementCollector struct {
 	rows     map[string][]map[string]any
 	rejected string
 	rejects  bool
+	noMoves  bool // отмена проведения: подготовка движений запрещена
 }
 
 func (c *movementCollector) host(name string, args []vm.Value) (vm.Value, error) {
@@ -217,6 +229,9 @@ func (c *movementCollector) host(name string, args []vm.Value) (vm.Value, error)
 		}
 		c.rejected, c.rejects = args[0].StringValue(), true
 		return vm.Value{}, fmt.Errorf("rejected: %s", c.rejected)
+	}
+	if c.noMoves {
+		return vm.Value{}, fmt.Errorf("movements cannot be prepared while cancelling a posting")
 	}
 	if args[0].Kind() != vm.String {
 		return vm.Value{}, fmt.Errorf("the register must be a String (name or id), got %s", args[0].Kind())
@@ -354,5 +369,51 @@ func (p *Platform) Post(ctx context.Context, docID string, id int64) error {
 			}
 		}
 		return tx.SetPosted(docID, id, true)
+	})
+}
+
+// Unpost отменяет проведение в одной транзакции: снимает все движения документа, выполняет необязательный
+// обработчик отмены из метаданных (он видит остаток уже без движений документа и может отказать вызовом Отказ,
+// например если отмена даст отрицательный остаток) и снимает признак проведения. Отказ или любая ошибка
+// откатывают всё: статус и движения не меняются. Отмена непроведённого документа — ErrNotPosted.
+func (p *Platform) Unpost(ctx context.Context, docID string, id int64) error {
+	if p.handlers[docID] == nil {
+		return fmt.Errorf("%w: %q", ErrNoHandler, docID)
+	}
+	model := p.store.Model()
+	var d *metadata.Document
+	for i := range model.Documents {
+		if model.Documents[i].ID == docID {
+			d = &model.Documents[i]
+		}
+	}
+	return p.store.Tx(ctx, func(tx *sqlite.Tx) error {
+		doc, err := tx.GetDocument(docID, id)
+		if err != nil {
+			return err
+		}
+		if !doc.Posted {
+			return fmt.Errorf("%w: %s %d", ErrNotPosted, docID, id)
+		}
+		for _, r := range model.Registers {
+			if err := tx.ReplaceMovements(r.ID, docID, id, nil); err != nil {
+				return err
+			}
+		}
+		if h := p.cancels[docID]; h != nil {
+			row, err := documentRow(d, doc)
+			if err != nil {
+				return err
+			}
+			col := &movementCollector{model: model, tx: tx, rows: map[string][]map[string]any{}, noMoves: true}
+			_, err = h.prog.NewMachine().Call(ctx, h.entry, []vm.Value{row}, vm.Options{MaxSteps: p.opt.MaxSteps, Host: col.host})
+			if col.rejects {
+				return fmt.Errorf("%w: cancelling %s %d: %s", ErrRejected, docID, id, col.rejected)
+			}
+			if err != nil {
+				return fmt.Errorf("cancelling %s %d (%s): %w", docID, id, h.file, err)
+			}
+		}
+		return tx.SetPosted(docID, id, false)
 	})
 }

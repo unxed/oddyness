@@ -90,6 +90,10 @@
       "posting": {
         "file": "bsl/receipt-posting.bsl",
         "procedure": "ПриПроведении"
+      },
+      "unposting": {
+        "file": "bsl/receipt-unposting.bsl",
+        "procedure": "ПриОтменеПроведения"
       }
     },
     {
