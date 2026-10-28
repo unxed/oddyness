@@ -135,7 +135,11 @@
             }
           ]
         }
-      ]
+      ],
+      "posting": {
+        "file": "bsl/issue-posting.bsl",
+        "procedure": "ПриПроведении"
+      }
     }
   ],
   "registers": [

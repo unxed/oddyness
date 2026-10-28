@@ -127,6 +127,9 @@ func (s *Store) UpdateDocument(ctx context.Context, docID string, id int64, head
 		return err
 	}
 	return s.inTx(ctx, func(tx *sql.Tx) error {
+		if err := checkDraft(ctx, tx, d, id); err != nil {
+			return err
+		}
 		if err := checkUniqueIn(ctx, tx, docTable(d.ID), d.Fields, h, id); err != nil {
 			return err
 		}
@@ -150,6 +153,23 @@ func (s *Store) UpdateDocument(ctx context.Context, docID string, id int64, head
 	})
 }
 
+// checkDraft отказывает, если документ проведён: правка и удаление проведённого запрещены ядром
+// (сначала отмена проведения). Отсутствующий документ здесь не ошибка: его обнаружит сама операция.
+func checkDraft(ctx context.Context, tx *sql.Tx, d *metadata.Document, id int64) error {
+	var posted int
+	err := tx.QueryRowContext(ctx, fmt.Sprintf(`SELECT "posted" FROM %s WHERE "id" = ?`, docTable(d.ID)), id).Scan(&posted)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if posted == 1 {
+		return fmt.Errorf("%w: %s %d: cancel the posting first", ErrPosted, d.ID, id)
+	}
+	return nil
+}
+
 // DeleteDocument удаляет документ вместе со строками.
 func (s *Store) DeleteDocument(ctx context.Context, docID string, id int64) error {
 	d, err := s.document(docID)
@@ -157,6 +177,9 @@ func (s *Store) DeleteDocument(ctx context.Context, docID string, id int64) erro
 		return err
 	}
 	return s.inTx(ctx, func(tx *sql.Tx) error {
+		if err := checkDraft(ctx, tx, d, id); err != nil {
+			return err
+		}
 		// движения удаляемого регистратора не должны остаться сиротами
 		for _, r := range s.model.Registers {
 			if _, err := tx.ExecContext(ctx, fmt.Sprintf(`DELETE FROM %s WHERE "recorder_doc" = ? AND "recorder_id" = ?`, regTable(r.ID)), d.ID, id); err != nil {
