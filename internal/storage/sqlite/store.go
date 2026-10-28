@@ -157,17 +157,14 @@ func Create(path string, m *metadata.Model) (*Store, error) {
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
-	fp, err := fingerprint(m)
-	if err != nil {
-		return nil, err
-	}
+	lines := schemaLines(m)
 	db, err := connect(path)
 	if err != nil {
 		os.Remove(path)
 		return nil, err
 	}
 	s := newStore(db, m)
-	if err := s.createSchema(fp); err != nil {
+	if err := s.createSchema(schemaFingerprint(lines), strings.Join(lines, "\n")); err != nil {
 		db.Close()
 		os.Remove(path)
 		return nil, err
@@ -183,7 +180,7 @@ func newStore(db *sql.DB, m *metadata.Model) *Store {
 	return s
 }
 
-func (s *Store) createSchema(fp string) error {
+func (s *Store) createSchema(fp, schema string) error {
 	tx, err := s.db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return err
@@ -223,7 +220,7 @@ func (s *Store) createSchema(fp string) error {
 			return fmt.Errorf("sqlite: schema: %w", err)
 		}
 	}
-	if _, err := tx.Exec(`INSERT INTO oddyness_meta (key, value) VALUES ('schema_version', ?), ('fingerprint', ?)`, fmt.Sprint(SchemaVersion), fp); err != nil {
+	if _, err := tx.Exec(`INSERT INTO oddyness_meta (key, value) VALUES ('schema_version', ?), ('fingerprint', ?), ('schema', ?)`, fmt.Sprint(SchemaVersion), fp, schema); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(fmt.Sprintf(`PRAGMA user_version = %d`, SchemaVersion)); err != nil {
@@ -236,10 +233,6 @@ func (s *Store) createSchema(fp string) error {
 // любого изменения; несовпадение — ErrVersion или ErrConfig, база остаётся как была.
 func Open(path string, m *metadata.Model) (*Store, error) {
 	if _, err := os.Stat(path); err != nil {
-		return nil, err
-	}
-	fp, err := fingerprint(m)
-	if err != nil {
 		return nil, err
 	}
 	db, err := connect(path)
@@ -260,11 +253,37 @@ func Open(path string, m *metadata.Model) (*Store, error) {
 		db.Close()
 		return nil, fmt.Errorf("sqlite: not an oddyness database: %w", err)
 	}
-	if stored != fp {
+	if err := checkConfig(db, stored, m); err != nil {
 		db.Close()
-		return nil, ErrConfig
+		return nil, err
 	}
 	return newStore(db, m), nil
+}
+
+// checkConfig сверяет схему базы с конфигурацией: допустимы любые изменения вне схемы (подписи, признаки проверки,
+// обработчики, отчёты), структурное различие — ErrConfig с перечнем различий. База, созданная до сохранения схемы (только
+// отпечаток всей модели), открывается лишь неизменённой конфигурацией.
+func checkConfig(db *sql.DB, storedFP string, m *metadata.Model) error {
+	var schema string
+	err := db.QueryRow(`SELECT value FROM oddyness_meta WHERE key = 'schema'`).Scan(&schema)
+	if errors.Is(err, sql.ErrNoRows) {
+		legacy, ferr := fingerprint(m)
+		if ferr != nil {
+			return ferr
+		}
+		if storedFP != legacy {
+			return fmt.Errorf("%w: the database has no stored schema (created by an earlier version) and the configuration changed", ErrConfig)
+		}
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("sqlite: %w", err)
+	}
+	cur := schemaLines(m)
+	if diff := schemaDiff(strings.Split(schema, "\n"), cur); len(diff) > 0 {
+		return fmt.Errorf("%w: the structure differs, a migration is required (migrations are not supported yet):\n  %s", ErrConfig, strings.Join(diff, "\n  "))
+	}
+	return nil
 }
 
 // Close закрывает базу и снимает блокировку сессии.

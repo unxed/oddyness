@@ -287,7 +287,7 @@ func TestOpenRefusals(t *testing.T) {
 	s.Close()
 
 	other := loadModel(t)
-	other.Catalogs[0].Name = "Другое"
+	other.Catalogs[0].Fields[1].Type = metadata.TypeBoolean // другая структура
 	if _, err := Open(path, other); !errors.Is(err, ErrConfig) {
 		t.Errorf("different configuration: %v", err)
 	}
