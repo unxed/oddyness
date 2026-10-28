@@ -1,0 +1,73 @@
+name: native-os
+
+# Windows и macOS: тесты без display на этой ОС, сборка без CGO и реальное окно приложения. На Windows сценарий вводит
+# настоящие нажатия клавиш (SendKeys) в окно Win32; на macOS у раннера нет прав Accessibility для ввода, поэтому проверяются
+# запуск окна, его видимость и снимок экрана. Linux (GTK под Xvfb) покрывает workflow ci.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Vet and tests on Windows (serial: GUI packages share desktop state)
+        run: |
+          go vet ./...
+          go test -p 1 -count=1 ./...
+      - name: Build without CGO (console tool and GUI application)
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          go build -o oddyness.exe ./cmd/oddyness
+          go build -ldflags="-H windowsgui" -o oddyness-gui.exe ./cmd/oddyness
+      - name: Win32 window scenario (real window, real keystrokes)
+        shell: pwsh
+        env:
+          ODDYNESS_SHOTS: ${{ runner.temp }}/native-os-shots
+        run: ./tools/native/windows-documents.ps1
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-os-windows
+          path: ${{ runner.temp }}/native-os-shots
+          if-no-files-found: warn
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Vet and tests on macOS
+        run: |
+          go vet ./...
+          go test -p 1 -count=1 ./...
+      - name: Build without CGO
+        env:
+          CGO_ENABLED: "0"
+        run: go build -o oddyness ./cmd/oddyness
+      - name: Cocoa window scenario (window shown, screenshot; no key injection)
+        env:
+          ODDYNESS_SHOTS: ${{ runner.temp }}/native-os-shots
+        run: bash tools/native/macos-documents.sh
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-os-macos
+          path: ${{ runner.temp }}/native-os-shots
+          if-no-files-found: warn
