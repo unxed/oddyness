@@ -47,6 +47,10 @@ jobs:
           name: native-shots
           path: ${{ runner.temp }}/native-shots
           if-no-files-found: warn
+      - name: Scale correctness, retained memory and posting/query benchmarks (output is the measurement)
+        run: |
+          go test -count=1 -v -run 'TestScaleBalances|TestNoRetainedGrowth' ./internal/perf
+          go test -run '^$' -bench . -benchtime=50x -benchmem ./internal/perf
       - name: Benchmark exact numbers (informational output)
         run: go test -run '^$' -bench . -benchmem ./internal/value
       - name: Benchmark BSL VM hot loops (informational output)
