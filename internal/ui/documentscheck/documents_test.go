@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/unxed/goWidgets"
+	_ "github.com/unxed/goWidgets/backends/headless"
 	"github.com/unxed/oddyness/internal/forms"
 	"github.com/unxed/oddyness/internal/formsbackend"
 	"github.com/unxed/oddyness/internal/metadata"
