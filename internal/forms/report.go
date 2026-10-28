@@ -14,9 +14,9 @@ type ReportParam struct {
 }
 
 // ReportBackend выполняет отчёт ядром. params — значения параметров по имени: value.Ref или nil (пусто — параметр
-// не отбирает). Значения строк результата — value.Number, string, bool, value.Ref или nil.
+// не отбирает). Значения строк результата — value.Number, string, bool, value.Ref или nil, по одному на столбец отчёта.
 type ReportBackend interface {
-	Run(params map[string]any) (columns []string, rows [][]any, err error)
+	Run(params map[string]any) (rows [][]any, err error)
 }
 
 // Report — состояние окна отчёта: форма параметров и результат последнего «Сформировать». Строится из описания
@@ -26,14 +26,15 @@ type Report struct {
 	params   *Form
 	be       ReportBackend
 	values   map[string]any
-	cols     []string
+	cols     []string // заголовки известны заранее (по описанию отчёта), строк до первого запуска нет
 	rows     [][]string
 	ran      bool
 }
 
-// NewReport открывает отчёт: форма параметров пуста (все параметры необязательны), результата ещё нет.
-func NewReport(id, name string, params []ReportParam, be ReportBackend) *Report {
-	r := &Report{id: id, name: name, be: be}
+// NewReport открывает отчёт: форма параметров пуста (все параметры необязательны), результата ещё нет. columns —
+// заголовки столбцов результата (известны по описанию отчёта до первого запуска: окно строит таблицу сразу).
+func NewReport(id, name string, params []ReportParam, columns []string, be ReportBackend) *Report {
+	r := &Report{id: id, name: name, be: be, cols: append([]string(nil), columns...)}
 	fields := make([]metadata.Field, len(params))
 	for i, p := range params {
 		fields[i] = metadata.Field{ID: p.Name, Name: p.Name, Type: metadata.TypeRef, Target: p.Catalog}
@@ -53,7 +54,7 @@ func (r *Report) Close()       { r.params.Close() }
 // Ran сообщает, формировался ли отчёт хотя бы раз.
 func (r *Report) Ran() bool { return r.ran }
 
-// Columns — заголовки результата последнего формирования.
+// Columns — заголовки столбцов результата.
 func (r *Report) Columns() []string { return append([]string(nil), r.cols...) }
 
 // Rows — строки результата в тексте (числа — точной записью, ссылка — номером записи, булево — «да»/«нет»).
@@ -69,18 +70,23 @@ func (r *Report) Run() error {
 	if err := r.params.Save(); err != nil {
 		return err
 	}
-	cols, rows, err := r.be.Run(r.values)
+	rows, err := r.be.Run(r.values)
 	if err != nil {
-		r.cols, r.rows, r.ran = nil, nil, false
+		r.rows, r.ran = nil, false
 		r.params.SetFormError(err.Error())
 		return err
 	}
-	r.cols = cols
 	r.rows = make([][]string, len(rows))
 	for i, row := range rows {
 		cells := make([]string, len(row))
 		for j, v := range row {
 			cells[j] = cell(v)
+		}
+		if len(cells) != len(r.cols) {
+			r.rows, r.ran = nil, false
+			err := fmt.Errorf("forms: the report backend returned %d values per row, the report has %d columns", len(cells), len(r.cols))
+			r.params.SetFormError(err.Error())
+			return err
 		}
 		r.rows[i] = cells
 	}

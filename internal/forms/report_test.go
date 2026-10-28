@@ -36,7 +36,7 @@ func mustRun(t *testing.T, r *forms.Report) [][]string {
 func TestReportForm(t *testing.T) {
 	e := newDocEnv(t)
 	r := e.report()
-	if r.Ran() || !strings.Contains(r.Snapshot(), "not run") {
+	if !reflect.DeepEqual(r.Columns(), []string{"Товар", "Остаток"}) || r.Ran() || !strings.Contains(r.Snapshot(), "not run") {
 		t.Fatalf("a new report must not have a result:\n%s", r.Snapshot())
 	}
 	if got := mustRun(t, r); len(got) != 0 || !r.Ran() || !reflect.DeepEqual(r.Columns(), []string{"Товар", "Остаток"}) {
@@ -117,17 +117,19 @@ type stubBackend struct {
 	got   map[string]any
 }
 
-func (b *stubBackend) Run(params map[string]any) ([]string, [][]any, error) {
+func (b *stubBackend) Run(params map[string]any) ([][]any, error) {
 	b.calls++
 	b.got = params
-	return []string{"Флаг", "Число", "Ссылка", "Пусто"}, b.rows, b.err
+	return b.rows, b.err
 }
+
+var stubColumns = []string{"Флаг", "Число", "Ссылка", "Пусто"}
 
 // Ошибка ядра очищает результат и остаётся в Error; параметров может не быть; ячейки всех типов.
 func TestReportFormBackend(t *testing.T) {
 	n, _ := value.Parse("1.50")
 	be := &stubBackend{rows: [][]any{{true, n, value.Ref{Catalog: "goods", ID: 7}, nil}, {false, n, nil, nil}}}
-	r := forms.NewReport("r", "Р", nil, be)
+	r := forms.NewReport("r", "Р", nil, stubColumns, be)
 	if len(r.Params().Controls()) != 0 || r.Params().Focused() != "" {
 		t.Fatalf("a report without parameters has controls: %v", r.Params().Controls())
 	}
@@ -138,15 +140,21 @@ func TestReportFormBackend(t *testing.T) {
 		t.Errorf("rows = %v, want %v", r.Rows(), want)
 	}
 	be.err = errors.New("storage is unavailable")
-	if err := r.Run(); err == nil || r.Error() != "storage is unavailable" || r.Ran() || len(r.Rows()) != 0 || len(r.Columns()) != 0 {
+	if err := r.Run(); err == nil || r.Error() != "storage is unavailable" || r.Ran() || len(r.Rows()) != 0 || len(r.Columns()) != 4 {
 		t.Errorf("backend error: err=%v error=%q ran=%v rows=%v", err, r.Error(), r.Ran(), r.Rows())
 	}
 	be.err = nil
 	if err := r.Run(); err != nil || r.Error() != "" || !r.Ran() {
 		t.Errorf("Run after the error: %v error=%q", err, r.Error())
 	}
+	// строка не по числу столбцов — ошибка бэкенда, а не молчаливая обрезка
+	be.rows = [][]any{{true}}
+	if err := r.Run(); err == nil || !strings.Contains(err.Error(), "1 values per row") || r.Ran() {
+		t.Errorf("a short row: %v", err)
+	}
+	be.rows = nil
 	// параметр передаётся ссылкой на справочник из описания
-	r2 := forms.NewReport("r2", "Р2", []forms.ReportParam{{Name: "Товар", Catalog: "goods"}}, be)
+	r2 := forms.NewReport("r2", "Р2", []forms.ReportParam{{Name: "Товар", Catalog: "goods"}}, stubColumns, be)
 	if err := r2.Params().SetText("r2/f/Товар", "5"); err != nil {
 		t.Fatal(err)
 	}

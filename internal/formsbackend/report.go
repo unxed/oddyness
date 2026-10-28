@@ -14,12 +14,12 @@ type reportBackend struct {
 	rep   *report.Report
 }
 
-func (b reportBackend) Run(params map[string]any) ([]string, [][]any, error) {
+func (b reportBackend) Run(params map[string]any) ([][]any, error) {
 	res, err := b.rep.Run(context.Background(), b.store, params)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return res.Columns, res.Rows, nil
+	return res.Rows, nil
 }
 
 // OpenReport открывает форму отчёта над хранилищем; параметры формы — параметры запроса отчёта (ссылки).
@@ -28,5 +28,9 @@ func OpenReport(store *sqlite.Store, rep *report.Report) *forms.Report {
 	for i, p := range rep.Params() {
 		params[i] = forms.ReportParam{Name: p.Name, Catalog: p.Type.Target}
 	}
-	return forms.NewReport(rep.ID, rep.Name, params, reportBackend{store, rep})
+	cols := make([]string, len(rep.Query.Columns))
+	for i, c := range rep.Query.Columns {
+		cols[i] = c.Name
+	}
+	return forms.NewReport(rep.ID, rep.Name, params, cols, reportBackend{store, rep})
 }
