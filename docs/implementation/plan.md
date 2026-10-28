@@ -140,7 +140,7 @@
 
 ### P13. Выдача и проверка доступного остатка
 
-- Статус: в работе (PR и `ci` — ниже после прогона; `issue-posting.bsl`, функции хоста `Остаток` и `Отказ`, запрет правки и удаления проведённого `sqlite.ErrPosted`; `docs/implementation/posting.md`; команда `go test ./internal/platform ./internal/storage/sqlite ./cmd/oddyness`). Зависимости: P12.
+- Статус: сделано (PR https://github.com/unxed/oddyness/pull/21, `ci` https://github.com/unxed/oddyness/actions/runs/40608027806 на коммите `1f132d7e1f740587ec1925c0698e4c279285efb2`; проверено через API S03 (с перезапуском), S04, S10, S12, повторное проведение; S09 — проверки полей P10; `issue-posting.bsl`, функции хоста `Остаток` и `Отказ`, запрет правки и удаления проведённого `sqlite.ErrPosted`; `docs/implementation/posting.md`; команда `go test ./internal/platform ./internal/storage/sqlite ./cmd/oddyness`). Зависимости: P12.
 - Сделать: BSL-правило выдачи, суммирование строк одного товара, проверку остатка
   в той же транзакции; ядро запрещает изменение/удаление проведённого документа.
 - Проверить: S03, S04, S09, S10, S12 через API, включая повторное проведение.
