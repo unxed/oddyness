@@ -1,5 +1,5 @@
 # Сценарий окна поступлений на Windows: настоящее окно Win32, настоящие нажатия клавиш (SendKeys).
-# Те же шаги и порядок Tab, что у TestNativeDocuments/receipt (Linux): шапка, строка с пустым товаром (ошибка поля),
+# Кнопка нажимается пробелом (на Win32 это штатная клавиша push-кнопки). Те же шаги и порядок Tab, что у TestNativeDocuments/receipt (Linux): шапка, строка с пустым товаром (ошибка поля),
 # строка, «Сохранить», «Провести», «Закрыть»; затем независимое чтение базы консольным oddyness.
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
@@ -49,19 +49,19 @@ try {
     Shot 'before'
 
     Keys 'R-1'; Tabs 1; Keys '2026-10-28'; Tabs 1; Keys 'batch'
-    Tabs 2; Keys '10.500'; Tabs 1; Keys '{ENTER}'      # строка без товара: ошибка поля, окно открыто
+    Tabs 2; Keys '10.500'; Tabs 1; Keys ' '      # строка без товара: ошибка поля, окно открыто
     Shot 'line-error'
     if ($p.HasExited) { throw 'the window closed after recording a line without a product' }
-    Keys '1'; Tabs 2; Keys '{ENTER}'                  # товар 1, «Записать строку»
+    Keys '1'; Tabs 2; Keys ' '                  # товар 1, «Записать строку»
     Shot 'line-added'
     if ($p.HasExited) { throw 'the window closed after recording a line' }
-    Tabs 5; Keys '{ENTER}'                            # «Сохранить»
+    Tabs 5; Keys ' '                            # «Сохранить»
     Shot 'saved'
     if ($p.HasExited) { throw 'the window closed after Save' }
-    Tabs 9; Keys '{ENTER}'                            # «Провести»
+    Tabs 9; Keys ' '                            # «Провести»
     Shot 'posted'
     if ($p.HasExited) { throw 'the window closed after Post' }
-    Tabs 12; Keys '{ENTER}'                           # «Закрыть»
+    Tabs 12; Keys ' '                           # «Закрыть»
     if (-not $p.WaitForExit(20000)) { Shot 'not-exited'; throw 'the application did not exit after Close' }
     if ($p.ExitCode -ne 0) { throw "the application exited with code $($p.ExitCode)" }
 } finally {
