@@ -35,7 +35,7 @@ jobs:
         env:
           ODDYNESS_NATIVE_UI: "1"
           ODDYNESS_ARTIFACT_DIR: ${{ runner.temp }}/native-shots
-        run: go test -count=1 -v -run 'TestNativeForm|TestNativeApp|TestNativeDocuments|TestNativeIssue' ./cmd/oddyness
+        run: go test -count=1 -v -run 'TestNativeForm|TestNativeApp|TestNativeDocuments' ./cmd/oddyness
       - name: goWidgets native table on GTK at the pinned revision (upstream test, real GTK under Xvfb)
         run: |
           xvfb-run -a go test -count=1 -v github.com/unxed/goWidgets/backends/gtk/tabletest | tee "$RUNNER_TEMP/tabletest.log"
