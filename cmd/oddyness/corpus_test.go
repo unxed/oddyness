@@ -177,7 +177,7 @@ func TestCompatMatrixMatchesCorpus(t *testing.T) {
 	rows := map[string][]string{}
 	for _, line := range strings.Split(string(data), "\n") {
 		if m := regexp.MustCompile(`^\| ([A-Z]+-\d+) \|`).FindStringSubmatch(line); m != nil {
-			cells := strings.Split(strings.Trim(line, "| "), " | ")
+			cells := strings.Split(strings.Trim(strings.TrimRight(line, "\r"), "| "), " | ") // файл мог быть выгружен с CRLF
 			rows[m[1]] = cells
 		}
 	}

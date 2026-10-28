@@ -276,9 +276,11 @@ func TestSecondSessionIsRefused(t *testing.T) {
 		t.Fatalf("Open after Close: %v", err)
 	}
 	s2.Close()
-	if _, err := Open(path, m); err != nil {
-		t.Errorf("Open after the second session ended: %v", err)
+	s3, err := Open(path, m)
+	if err != nil {
+		t.Fatalf("Open after the second session ended: %v", err)
 	}
+	s3.Close() // на Windows открытый файл не удаляется вместе с каталогом теста
 }
 
 func TestOpenRefusals(t *testing.T) {
