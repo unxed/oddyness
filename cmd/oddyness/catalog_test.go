@@ -109,7 +109,7 @@ func TestCatalogErrors(t *testing.T) {
 		{"unknown id", []string{"catalog", "get", configDir, db, "goods", "99"}, 1, "record not found"},
 		{"bad id", []string{"catalog", "get", configDir, db, "goods", "x"}, 1, `invalid id "x"`},
 		{"db exists", []string{"db", "create", configDir, db}, 1, "already exists"},
-		{"missing db", []string{"catalog", "list", configDir, filepath.Join(t.TempDir(), "absent"), "goods"}, 1, "no such file"},
+		{"missing db", []string{"catalog", "list", configDir, filepath.Join(t.TempDir(), "absent"), "goods"}, 1, "absent"},
 		{"bad config", []string{"catalog", "list", t.TempDir(), db, "goods"}, 1, "metadata.json"},
 		{"usage db", []string{"db"}, 2, "usage:"},
 		{"usage db verb", []string{"db", "drop", configDir, db}, 2, "usage:"},

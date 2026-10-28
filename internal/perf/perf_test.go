@@ -363,7 +363,9 @@ func TestBudgets(t *testing.T) {
 		if got > b.allocs {
 			t.Errorf("%s: %.0f allocations per operation, budget %.0f", b.name, got, b.allocs)
 		}
-		if per > b.perOp {
+		// время измерено на linux; на других ОС (fsync при каждой транзакции заметно медленнее, Windows — в разы) оно только
+		// выводится, а бюджет выделений действует везде
+		if per > b.perOp && runtime.GOOS == "linux" {
 			t.Errorf("%s: %v per operation, budget %v", b.name, per, b.perOp)
 		}
 	}
