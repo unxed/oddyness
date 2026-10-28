@@ -80,6 +80,9 @@ type Document struct {
 	Fields  []Field     `json:"fields"`
 	Tables  []TablePart `json:"tables,omitempty"`
 	Posting *Posting    `json:"posting,omitempty"`
+	// Unposting — необязательный обработчик отмены проведения: проверка прикладных ограничений
+	// (например, запрет отрицательного остатка); допустим только вместе с Posting.
+	Unposting *Posting `json:"unposting,omitempty"`
 }
 
 // Register — регистр накопления: измерения (по чему ведётся учёт) и ресурсы
@@ -328,6 +331,14 @@ func (m *Model) validate(fail failFunc) error {
 		}
 		if d.Posting != nil {
 			if err := validatePosting(dp+".posting", d.Posting, fail); err != nil {
+				return err
+			}
+		}
+		if d.Unposting != nil {
+			if d.Posting == nil {
+				return fail(-1, dp+".unposting", "document %q has an unposting handler but no posting handler", d.Name)
+			}
+			if err := validatePosting(dp+".unposting", d.Unposting, fail); err != nil {
 				return err
 			}
 		}
