@@ -9,7 +9,6 @@ import (
 
 	"github.com/unxed/oddyness/internal/metadata"
 	"github.com/unxed/oddyness/internal/query"
-	"github.com/unxed/oddyness/internal/storage/sqlite"
 	"github.com/unxed/oddyness/internal/value"
 )
 
@@ -55,7 +54,7 @@ func runQuery(args []string, stdout, stderr io.Writer) int {
 		}
 		params[name] = v
 	}
-	s, err := sqlite.Open(args[1], m)
+	s, err := openStore(args[1], m)
 	if err != nil {
 		return fail(err)
 	}

@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	_ "modernc.org/sqlite" // драйвер database/sql "sqlite"
@@ -67,6 +68,7 @@ type Store struct {
 	db       *sql.DB
 	model    *metadata.Model
 	catalogs map[string]*metadata.Catalog
+	role     atomic.Int32 // Role: по умолчанию оператор
 }
 
 func tableName(catalogID string) string { return `"cat_` + catalogID + `"` }
@@ -414,6 +416,10 @@ func mapErr(err error) error {
 }
 
 func (s *Store) inTx(ctx context.Context, f func(tx *sql.Tx) error) error {
+	// страховка: все записи идут через inTx, поэтому новая операция записи не обойдёт роль, даже если забыла requireWrite
+	if err := s.requireWrite("write"); err != nil {
+		return err
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -428,6 +434,9 @@ func (s *Store) inTx(ctx context.Context, f func(tx *sql.Tx) error) error {
 // Insert добавляет запись и возвращает её идентификатор. Все поля обязательны,
 // кроме ссылок (пустая ссылка — NULL).
 func (s *Store) Insert(ctx context.Context, catalogID string, values map[string]any) (int64, error) {
+	if err := s.requireWrite("insert into catalog " + catalogID); err != nil {
+		return 0, err
+	}
 	c, err := s.catalog(catalogID)
 	if err != nil {
 		return 0, err
@@ -458,6 +467,9 @@ func (s *Store) Insert(ctx context.Context, catalogID string, values map[string]
 
 // Update полностью заменяет значения записи (правила — как у Insert).
 func (s *Store) Update(ctx context.Context, catalogID string, id int64, values map[string]any) error {
+	if err := s.requireWrite("update catalog " + catalogID); err != nil {
+		return err
+	}
 	c, err := s.catalog(catalogID)
 	if err != nil {
 		return err
@@ -495,6 +507,9 @@ func affected(res sql.Result, catalogID string, id int64) error {
 
 // Delete удаляет запись. Запись, на которую есть ссылки, удалить нельзя (ErrInvalid).
 func (s *Store) Delete(ctx context.Context, catalogID string, id int64) error {
+	if err := s.requireWrite("delete from catalog " + catalogID); err != nil {
+		return err
+	}
 	c, err := s.catalog(catalogID)
 	if err != nil {
 		return err

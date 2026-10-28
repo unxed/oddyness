@@ -59,7 +59,7 @@ func runApp(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
-	s, err := sqlite.Open(args[1], m)
+	s, err := openStore(args[1], m)
 	if err != nil {
 		return fail(err)
 	}

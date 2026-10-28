@@ -40,7 +40,7 @@ func runDocument(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
-	s, err := sqlite.Open(args[2], m)
+	s, err := openStore(args[2], m)
 	if err != nil {
 		return fail(err)
 	}

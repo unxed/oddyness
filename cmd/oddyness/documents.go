@@ -11,7 +11,6 @@ import (
 	"github.com/unxed/oddyness/internal/formsbackend"
 	"github.com/unxed/oddyness/internal/metadata"
 	"github.com/unxed/oddyness/internal/platform"
-	"github.com/unxed/oddyness/internal/storage/sqlite"
 	"github.com/unxed/oddyness/internal/ui"
 )
 
@@ -36,7 +35,7 @@ func runDocuments(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
-	s, err := sqlite.Open(args[1], m)
+	s, err := openStore(args[1], m)
 	if err != nil {
 		return fail(err)
 	}

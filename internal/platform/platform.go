@@ -329,6 +329,10 @@ func (c *movementCollector) balance(args []vm.Value) (vm.Value, error) {
 // Любая ошибка обработчика, проверки движений или записи откатывает всё. Повторное
 // проведение заменяет движения тем же набором и остатки не удваивает.
 func (p *Platform) Post(ctx context.Context, docID string, id int64) error {
+	// роль проверяется до обработчика: под ролью чтения BSL вообще не выполняется
+	if !p.store.CanWrite() {
+		return fmt.Errorf("%w: post %s %d (role %s)", sqlite.ErrDenied, docID, id, p.store.Role())
+	}
 	h := p.handlers[docID]
 	if h == nil {
 		return fmt.Errorf("%w: %q", ErrNoHandler, docID)
@@ -377,6 +381,9 @@ func (p *Platform) Post(ctx context.Context, docID string, id int64) error {
 // например если отмена даст отрицательный остаток) и снимает признак проведения. Отказ или любая ошибка
 // откатывают всё: статус и движения не меняются. Отмена непроведённого документа — ErrNotPosted.
 func (p *Platform) Unpost(ctx context.Context, docID string, id int64) error {
+	if !p.store.CanWrite() {
+		return fmt.Errorf("%w: unpost %s %d (role %s)", sqlite.ErrDenied, docID, id, p.store.Role())
+	}
 	if p.handlers[docID] == nil {
 		return fmt.Errorf("%w: %q", ErrNoHandler, docID)
 	}

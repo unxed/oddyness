@@ -83,6 +83,9 @@ func insertRows(ctx context.Context, tx *sql.Tx, d *metadata.Document, owner int
 // (tables: id части -> строки в порядке записи). Любая ошибка — проверки,
 // уникальности номера, ссылки на несуществующую запись — откатывает всё.
 func (s *Store) InsertDocument(ctx context.Context, docID string, header map[string]any, tables map[string][]map[string]any) (int64, error) {
+	if err := s.requireWrite("insert document " + docID); err != nil {
+		return 0, err
+	}
 	d, err := s.document(docID)
 	if err != nil {
 		return 0, err
@@ -118,6 +121,9 @@ func (s *Store) InsertDocument(ctx context.Context, docID string, header map[str
 
 // UpdateDocument атомарно заменяет шапку и все строки черновика.
 func (s *Store) UpdateDocument(ctx context.Context, docID string, id int64, header map[string]any, tables map[string][]map[string]any) error {
+	if err := s.requireWrite("update document " + docID); err != nil {
+		return err
+	}
 	d, err := s.document(docID)
 	if err != nil {
 		return err
@@ -172,6 +178,9 @@ func checkDraft(ctx context.Context, tx *sql.Tx, d *metadata.Document, id int64)
 
 // DeleteDocument удаляет документ вместе со строками.
 func (s *Store) DeleteDocument(ctx context.Context, docID string, id int64) error {
+	if err := s.requireWrite("delete document " + docID); err != nil {
+		return err
+	}
 	d, err := s.document(docID)
 	if err != nil {
 		return err
